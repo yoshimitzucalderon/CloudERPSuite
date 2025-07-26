@@ -1788,6 +1788,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/capital-calls/:id/approve', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { action, comments } = req.body;
+      const user = req.user as any;
+      
+      // Mock approval logic - in real implementation, update database
+      const approvalResult = {
+        capitalCallId: id,
+        userId: user.claims.sub,
+        userName: `${user.claims.first_name || ''} ${user.claims.last_name || ''}`.trim(),
+        action,
+        comments,
+        timestamp: new Date(),
+        success: true
+      };
+      
+      res.json(approvalResult);
+    } catch (error) {
+      console.error("Error processing approval:", error);
+      res.status(500).json({ message: "Failed to process approval" });
+    }
+  });
+
   app.post('/api/capital-calls', isAuthenticated, async (req, res) => {
     try {
       const mockCapitalCall = {

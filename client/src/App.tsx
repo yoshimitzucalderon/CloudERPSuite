@@ -19,6 +19,7 @@ import AuthorizationsAdvanced from "@/pages/AuthorizationsAdvanced";
 import WorkflowAutomation from "@/pages/WorkflowAutomation";
 import Investors from "@/pages/Investors";
 import CapitalCallDetail from "@/pages/CapitalCallDetail";
+import CapitalCallApproval from "@/pages/CapitalCallApproval";
 import Layout from "@/components/Layout";
 
 function Router() {
@@ -43,6 +44,7 @@ function Router() {
           <Route path="/workflow-automation" component={WorkflowAutomation} />
           <Route path="/investors" component={Investors} />
           <Route path="/investors/capital-call/:id" component={CapitalCallDetail} />
+          <Route path="/investors/capital-call/:id/approve" component={CapitalCallApproval} />
         </Layout>
       )}
       <Route component={NotFound} />
