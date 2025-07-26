@@ -16,6 +16,7 @@ import Users from "@/pages/Users";
 import ProjectManagement from "@/pages/ProjectManagement";
 import Commercial from "@/pages/Commercial";
 import AuthorizationsAdvanced from "@/pages/AuthorizationsAdvanced";
+import WorkflowAutomation from "@/pages/WorkflowAutomation";
 import Layout from "@/components/Layout";
 
 function Router() {
@@ -37,6 +38,7 @@ function Router() {
           <Route path="/project-management" component={ProjectManagement} />
           <Route path="/commercial" component={Commercial} />
           <Route path="/authorizations" component={AuthorizationsAdvanced} />
+          <Route path="/workflow-automation" component={WorkflowAutomation} />
         </Layout>
       )}
       <Route component={NotFound} />

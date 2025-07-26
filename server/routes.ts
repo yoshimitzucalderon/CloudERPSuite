@@ -868,6 +868,214 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Workflow Automation Routes
+  app.get('/api/workflow-templates', async (req, res) => {
+    try {
+      // Mock data for workflow templates
+      const templates = [
+        {
+          id: '1',
+          name: 'Aprobación de Presupuesto',
+          description: 'Workflow automático para aprobar presupuestos de proyecto',
+          category: 'financial',
+          triggerType: 'event',
+          steps: [
+            { name: 'Validación inicial', type: 'condition' },
+            { name: 'Notificar supervisor', type: 'notification' },
+            { name: 'Aprobación requerida', type: 'approval' },
+            { name: 'Análisis IA', type: 'ai_analysis' }
+          ],
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: '2',
+          name: 'Escalamiento de Permisos',
+          description: 'Escalamiento automático cuando los permisos se retrasan',
+          category: 'permit',
+          triggerType: 'scheduled',
+          steps: [
+            { name: 'Verificar estado', type: 'condition' },
+            { name: 'Análisis de retraso', type: 'ai_analysis' },
+            { name: 'Notificar urgencia', type: 'notification' }
+          ],
+          isActive: true,
+          createdAt: new Date()
+        }
+      ];
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching workflow templates:', error);
+      res.status(500).json({ error: 'Failed to fetch templates' });
+    }
+  });
+
+  app.get('/api/workflow-instances', async (req, res) => {
+    try {
+      // Mock data for workflow instances
+      const instances = [
+        {
+          id: '1',
+          templateId: '1',
+          name: 'Aprobación Presupuesto - Proyecto Alameda',
+          status: 'running',
+          currentStep: 2,
+          totalSteps: 4,
+          priority: 'high',
+          startedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          context: { projectId: 'proj-1', amount: 250000 }
+        },
+        {
+          id: '2',
+          templateId: '2',
+          name: 'Escalamiento Permisos - Torre Central',
+          status: 'completed',
+          currentStep: 3,
+          totalSteps: 3,
+          priority: 'medium',
+          startedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+          completedAt: new Date(Date.now() - 23 * 60 * 60 * 1000),
+          context: { projectId: 'proj-2', permitType: 'construccion' }
+        }
+      ];
+      res.json(instances);
+    } catch (error) {
+      console.error('Error fetching workflow instances:', error);
+      res.status(500).json({ error: 'Failed to fetch instances' });
+    }
+  });
+
+  app.get('/api/notifications', async (req, res) => {
+    try {
+      // Mock smart notifications
+      const notifications = [
+        {
+          id: '1',
+          title: 'Análisis IA: Riesgo de retraso detectado',
+          message: 'El proyecto Alameda presenta un 85% de probabilidad de retraso en la fase de construcción',
+          type: 'ai_insight',
+          category: 'ai_recommendation',
+          priority: 'high',
+          isRead: false,
+          actionRequired: true,
+          createdAt: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
+        },
+        {
+          id: '2',
+          title: 'Aprobación requerida: Presupuesto adicional',
+          message: 'Se requiere aprobación para presupuesto adicional de $50,000 en materiales',
+          type: 'warning',
+          category: 'approval',
+          priority: 'high',
+          isRead: false,
+          actionRequired: true,
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
+        },
+        {
+          id: '3',
+          title: 'Workflow completado: Permisos actualizados',
+          message: 'El workflow de escalamiento de permisos se completó exitosamente',
+          type: 'success',
+          category: 'workflow',
+          priority: 'medium',
+          isRead: true,
+          actionRequired: false,
+          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000) // 4 hours ago
+        }
+      ];
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+  });
+
+  app.get('/api/ai-automation-rules', async (req, res) => {
+    try {
+      // Mock AI automation rules
+      const rules = [
+        {
+          id: '1',
+          name: 'Detector de Sobrecostos',
+          description: 'Detecta automáticamente cuando un proyecto excede el 110% del presupuesto',
+          entityType: 'project',
+          confidence_threshold: 0.85,
+          isActive: true,
+          triggerCount: 12,
+          lastTriggered: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          createdAt: new Date()
+        },
+        {
+          id: '2',
+          name: 'Predictor de Retrasos',
+          description: 'Predice retrasos en cronogramas basado en el progreso actual',
+          entityType: 'project',
+          confidence_threshold: 0.75,
+          isActive: true,
+          triggerCount: 8,
+          lastTriggered: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          createdAt: new Date()
+        },
+        {
+          id: '3',
+          name: 'Optimizador de Recursos',
+          description: 'Sugiere redistribución de recursos entre proyectos',
+          entityType: 'resource',
+          confidence_threshold: 0.80,
+          isActive: false,
+          triggerCount: 3,
+          lastTriggered: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          createdAt: new Date()
+        }
+      ];
+      res.json(rules);
+    } catch (error) {
+      console.error('Error fetching AI rules:', error);
+      res.status(500).json({ error: 'Failed to fetch AI rules' });
+    }
+  });
+
+  app.post('/api/workflow-templates', async (req, res) => {
+    try {
+      const templateData = req.body;
+      // In real implementation, save to database
+      const newTemplate = {
+        id: Date.now().toString(),
+        ...templateData,
+        isActive: true,
+        createdAt: new Date()
+      };
+      res.json(newTemplate);
+    } catch (error) {
+      console.error('Error creating workflow template:', error);
+      res.status(500).json({ error: 'Failed to create template' });
+    }
+  });
+
+  app.post('/api/workflow-templates/:templateId/execute', async (req, res) => {
+    try {
+      const { templateId } = req.params;
+      const { context } = req.body;
+      
+      // In real implementation, use workflowAutomationService
+      const newInstance = {
+        id: Date.now().toString(),
+        templateId,
+        name: `Ejecución manual - ${new Date().toLocaleString()}`,
+        status: 'running',
+        currentStep: 0,
+        priority: 'medium',
+        startedAt: new Date(),
+        context
+      };
+      
+      res.json(newInstance);
+    } catch (error) {
+      console.error('Error executing workflow:', error);
+      res.status(500).json({ error: 'Failed to execute workflow' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

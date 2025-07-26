@@ -10,6 +10,7 @@ import {
   decimal,
   boolean,
   pgEnum,
+  real,
 } from "drizzle-orm/pg-core";
 import { relations } from 'drizzle-orm';
 import { createInsertSchema } from "drizzle-zod";
@@ -686,6 +687,98 @@ export const insertEscalationRecordSchema = createInsertSchema(escalationRecords
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Workflow templates for automation
+export const workflowTemplates = pgTable("workflow_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category").notNull(), // 'financial', 'project', 'permit', 'commercial'
+  triggerType: varchar("trigger_type").notNull(), // 'manual', 'scheduled', 'event', 'ai_driven'
+  triggerConditions: jsonb("trigger_conditions"), // JSON with conditions
+  steps: jsonb("steps").notNull(), // Array of workflow steps
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Workflow instances (actual executions)
+export const workflowInstances = pgTable("workflow_instances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => workflowTemplates.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  status: varchar("status").notNull(), // 'pending', 'running', 'completed', 'failed', 'cancelled'
+  currentStep: integer("current_step").default(0).notNull(),
+  context: jsonb("context"), // Runtime data and variables
+  startedBy: varchar("started_by").references(() => users.id),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+  priority: varchar("priority").default('medium').notNull(), // 'low', 'medium', 'high', 'critical'
+});
+
+// Workflow step executions
+export const workflowStepExecutions = pgTable("workflow_step_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  instanceId: varchar("instance_id").notNull().references(() => workflowInstances.id),
+  stepIndex: integer("step_index").notNull(),
+  stepName: varchar("step_name").notNull(),
+  stepType: varchar("step_type").notNull(), // 'approval', 'notification', 'api_call', 'ai_analysis', 'condition'
+  status: varchar("status").notNull(), // 'pending', 'running', 'completed', 'failed', 'skipped'
+  input: jsonb("input"),
+  output: jsonb("output"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+});
+
+// AI automation rules
+export const aiAutomationRules = pgTable("ai_automation_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  entityType: varchar("entity_type").notNull(), // 'project', 'permit', 'budget', 'document'
+  conditions: jsonb("conditions").notNull(), // AI analysis conditions
+  actions: jsonb("actions").notNull(), // Automated actions to take
+  confidence_threshold: real("confidence_threshold").default(0.8).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastTriggered: timestamp("last_triggered"),
+  triggerCount: integer("trigger_count").default(0).notNull(),
+});
+
+// Smart notifications
+export const smartNotifications = pgTable("smart_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  type: varchar("type").notNull(), // 'info', 'warning', 'error', 'success', 'ai_insight'
+  category: varchar("category").notNull(), // 'workflow', 'deadline', 'approval', 'ai_recommendation'
+  priority: varchar("priority").default('medium').notNull(),
+  entityType: varchar("entity_type"), // Related entity type
+  entityId: varchar("entity_id"), // Related entity ID
+  actionRequired: boolean("action_required").default(false).notNull(),
+  actionUrl: varchar("action_url"),
+  isRead: boolean("is_read").default(false).notNull(),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  scheduledFor: timestamp("scheduled_for"), // For delayed notifications
+});
+
+export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
+export type InsertWorkflowTemplate = typeof workflowTemplates.$inferInsert;
+export type WorkflowInstance = typeof workflowInstances.$inferSelect;
+export type InsertWorkflowInstance = typeof workflowInstances.$inferInsert;
+export type WorkflowStepExecution = typeof workflowStepExecutions.$inferSelect;
+export type InsertWorkflowStepExecution = typeof workflowStepExecutions.$inferInsert;
+export type AiAutomationRule = typeof aiAutomationRules.$inferSelect;
+export type InsertAiAutomationRule = typeof aiAutomationRules.$inferInsert;
+export type SmartNotification = typeof smartNotifications.$inferSelect;
+export type InsertSmartNotification = typeof smartNotifications.$inferInsert;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 export type InsertPermit = z.infer<typeof insertPermitSchema>;

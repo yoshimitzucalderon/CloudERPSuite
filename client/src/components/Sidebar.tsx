@@ -26,6 +26,7 @@ const navigation = [
   { name: 'Control Presupuestal', href: '/budget', icon: Calculator },
   { name: 'Calendario', href: '/calendar', icon: Calendar },
   { name: 'Documentos', href: '/documents', icon: FolderOpen },
+  { name: 'Automatización', href: '/workflow-automation', icon: Settings },
   { name: 'Usuarios', href: '/users', icon: Users },
 ];
 
