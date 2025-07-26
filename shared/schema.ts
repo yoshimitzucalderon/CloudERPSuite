@@ -779,6 +779,185 @@ export type AiAutomationRule = typeof aiAutomationRules.$inferSelect;
 export type InsertAiAutomationRule = typeof aiAutomationRules.$inferInsert;
 export type SmartNotification = typeof smartNotifications.$inferSelect;
 export type InsertSmartNotification = typeof smartNotifications.$inferInsert;
+
+// Document categories enum
+export const documentCategoryEnum = pgEnum('document_category', [
+  'contrato', 'plano', 'permiso', 'presupuesto', 'factura', 'comprobante', 
+  'certificado', 'licencia', 'escritura', 'avaluo', 'otro'
+]);
+
+// Document status enum
+export const documentStatusEnum = pgEnum('document_status', [
+  'borrador', 'revision', 'aprobado', 'rechazado', 'archivado', 'vencido'
+]);
+
+// Access level enum
+export const accessLevelEnum = pgEnum('access_level', [
+  'publico', 'interno', 'confidencial', 'restringido'
+]);
+
+// Advanced document management system
+export const documentLibrary = pgTable("document_library", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: documentCategoryEnum("category").notNull(),
+  status: documentStatusEnum("status").notNull().default('borrador'),
+  accessLevel: accessLevelEnum("access_level").notNull().default('interno'),
+  
+  // File information
+  fileName: varchar("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  mimeType: varchar("mime_type").notNull(),
+  filePath: varchar("file_path").notNull(),
+  checksum: varchar("checksum"), // For integrity verification
+  
+  // OCR and content
+  extractedText: text("extracted_text"), // OCR extracted text
+  ocrStatus: varchar("ocr_status").default('pending'), // 'pending', 'processing', 'completed', 'failed'
+  ocrConfidence: real("ocr_confidence"), // OCR confidence score
+  
+  // Versioning
+  version: varchar("version").notNull().default('1.0'),
+  parentDocumentId: varchar("parent_document_id").references(() => documentLibrary.id),
+  isLatestVersion: boolean("is_latest_version").default(true).notNull(),
+  
+  // Metadata
+  tags: text("tags").array(), // Searchable tags
+  customFields: jsonb("custom_fields"), // Custom metadata fields
+  
+  // Relationships
+  projectId: varchar("project_id").references(() => projects.id),
+  entityType: varchar("entity_type"), // 'project', 'client', 'permit', etc.
+  entityId: varchar("entity_id"), // Reference to related entity
+  
+  // Security and permissions
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  ownerId: varchar("owner_id").notNull().references(() => users.id),
+  
+  // Lifecycle dates
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  expirationDate: timestamp("expiration_date"),
+  archivedAt: timestamp("archived_at"),
+  
+  // Digital signature
+  isSigned: boolean("is_signed").default(false).notNull(),
+  signatureData: jsonb("signature_data"), // Digital signature information
+});
+
+// Document versions history
+export const documentVersions = pgTable("document_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => documentLibrary.id),
+  version: varchar("version").notNull(),
+  fileName: varchar("file_name").notNull(),
+  filePath: varchar("file_path").notNull(),
+  fileSize: integer("file_size").notNull(),
+  changes: text("changes"), // Description of changes
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Document approval workflows
+export const documentApprovalWorkflows = pgTable("document_approval_workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => documentLibrary.id),
+  workflowName: varchar("workflow_name").notNull(),
+  status: varchar("status").notNull().default('pending'), // 'pending', 'in_progress', 'approved', 'rejected'
+  currentStep: integer("current_step").default(0).notNull(),
+  totalSteps: integer("total_steps").notNull(),
+  approvalSteps: jsonb("approval_steps").notNull(), // Array of approval steps
+  comments: text("comments"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+// Document approval steps
+export const documentApprovalSteps = pgTable("document_approval_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => documentApprovalWorkflows.id),
+  stepOrder: integer("step_order").notNull(),
+  approverRole: varchar("approver_role").notNull(),
+  approverId: varchar("approver_id").references(() => users.id),
+  status: varchar("status").notNull().default('pending'), // 'pending', 'approved', 'rejected', 'skipped'
+  comments: text("comments"),
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  deadline: timestamp("deadline"),
+});
+
+// Document access permissions
+export const documentPermissions = pgTable("document_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => documentLibrary.id),
+  userId: varchar("user_id").references(() => users.id),
+  roleId: varchar("role_id"), // For role-based permissions
+  permissionType: varchar("permission_type").notNull(), // 'read', 'write', 'delete', 'approve'
+  grantedBy: varchar("granted_by").notNull().references(() => users.id),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+// Document activity log
+export const documentActivityLog = pgTable("document_activity_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => documentLibrary.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  action: varchar("action").notNull(), // 'created', 'viewed', 'downloaded', 'updated', 'approved', 'rejected'
+  details: jsonb("details"), // Additional action details
+  ipAddress: varchar("ip_address"),
+  userAgent: varchar("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Document templates for common document types
+export const documentTemplates = pgTable("document_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: documentCategoryEnum("category").notNull(),
+  templatePath: varchar("template_path").notNull(),
+  fields: jsonb("fields").notNull(), // Template fields configuration
+  approvalWorkflow: jsonb("approval_workflow"), // Default approval workflow
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Document sharing and external access
+export const documentShares = pgTable("document_shares", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => documentLibrary.id),
+  shareToken: varchar("share_token").notNull().unique(),
+  shareType: varchar("share_type").notNull(), // 'public', 'protected', 'private'
+  accessLevel: varchar("access_level").notNull(), // 'view', 'download', 'comment'
+  password: varchar("password"), // For protected shares
+  expiresAt: timestamp("expires_at"),
+  maxDownloads: integer("max_downloads"),
+  downloadCount: integer("download_count").default(0).notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type DocumentLibrary = typeof documentLibrary.$inferSelect;
+export type InsertDocumentLibrary = typeof documentLibrary.$inferInsert;
+export type DocumentVersion = typeof documentVersions.$inferSelect;
+export type InsertDocumentVersion = typeof documentVersions.$inferInsert;
+export type DocumentApprovalWorkflow = typeof documentApprovalWorkflows.$inferSelect;
+export type InsertDocumentApprovalWorkflow = typeof documentApprovalWorkflows.$inferInsert;
+export type DocumentApprovalStep = typeof documentApprovalSteps.$inferSelect;
+export type InsertDocumentApprovalStep = typeof documentApprovalSteps.$inferInsert;
+export type DocumentPermission = typeof documentPermissions.$inferSelect;
+export type InsertDocumentPermission = typeof documentPermissions.$inferInsert;
+export type DocumentActivityLog = typeof documentActivityLog.$inferSelect;
+export type InsertDocumentActivityLog = typeof documentActivityLog.$inferInsert;
+export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type InsertDocumentTemplate = typeof documentTemplates.$inferInsert;
+export type DocumentShare = typeof documentShares.$inferSelect;
+export type InsertDocumentShare = typeof documentShares.$inferInsert;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 export type InsertPermit = z.infer<typeof insertPermitSchema>;

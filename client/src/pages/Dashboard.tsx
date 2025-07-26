@@ -120,13 +120,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+            <div className="p-2 border rounded-lg bg-green-50 border-green-200 cursor-pointer transition-colors">
               <div className="flex items-start space-x-2">
-                <FileText className="h-3 w-3 text-purple-500 mt-1" />
+                <FileText className="h-3 w-3 text-green-600 mt-1" />
                 <div>
-                  <h4 className="text-xs font-medium">Gestión Documental Avanzada</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    OCR, versionado, flujos de aprobación y firma digital
+                  <h4 className="text-xs font-medium text-green-700">✓ Gestión Documental Avanzada</h4>
+                  <p className="text-xs text-green-600 mt-1">
+                    OCR automático, versionado, flujos de aprobación completados
                   </p>
                 </div>
               </div>
@@ -156,13 +156,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+            <div className="p-2 border rounded-lg bg-green-50 border-green-200 cursor-pointer transition-colors">
               <div className="flex items-start space-x-2">
-                <Settings className="h-3 w-3 text-orange-500 mt-1" />
+                <Settings className="h-3 w-3 text-green-600 mt-1" />
                 <div>
-                  <h4 className="text-xs font-medium">Automatización de Procesos</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Workflows automáticos, notificaciones inteligentes y AI
+                  <h4 className="text-xs font-medium text-green-700">✓ Automatización de Procesos</h4>
+                  <p className="text-xs text-green-600 mt-1">
+                    Workflows automáticos, notificaciones inteligentes y AI completados
                   </p>
                 </div>
               </div>

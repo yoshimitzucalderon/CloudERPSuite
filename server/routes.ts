@@ -1076,6 +1076,246 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document Management Routes
+  app.get('/api/documents', async (req, res) => {
+    try {
+      // Mock document data with OCR capabilities
+      const documents = [
+        {
+          id: '1',
+          name: 'Contrato de Compraventa - Lote 15A',
+          description: 'Contrato firmado para la venta del lote 15A en el proyecto Alameda',
+          category: 'contrato',
+          status: 'aprobado',
+          fileName: 'contrato_lote_15A.pdf',
+          fileSize: 2456789,
+          mimeType: 'application/pdf',
+          version: '2.1',
+          extractedText: 'CONTRATO DE COMPRAVENTA - Entre la empresa CONSTRUCTORA YCM360 S.A.S. y el señor Juan Pérez, se celebra el presente contrato para la compraventa del lote número 15A ubicado en el proyecto residencial Alameda por un valor de $120.000.000 COP...',
+          ocrStatus: 'completed',
+          ocrConfidence: 0.96,
+          tags: ['contrato', 'venta', 'lote-15A', 'alameda'],
+          projectId: 'proj-1',
+          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          isLatestVersion: true,
+          isSigned: true
+        },
+        {
+          id: '2',
+          name: 'Planos Arquitectónicos Torre B',
+          description: 'Planos técnicos actualizados para la construcción de la Torre B',
+          category: 'plano',
+          status: 'revision',
+          fileName: 'planos_torre_b_v3.dwg',
+          fileSize: 15678234,
+          mimeType: 'application/dwg',
+          version: '3.0',
+          extractedText: 'PLANOS ARQUITECTÓNICOS - TORRE B - Escala 1:100 - Área construida: 1,250 m2 - Apartamentos tipo A: 8 unidades - Apartamentos tipo B: 4 unidades...',
+          ocrStatus: 'completed',
+          ocrConfidence: 0.88,
+          tags: ['planos', 'torre-b', 'arquitectura', 'construccion'],
+          projectId: 'proj-1',
+          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+          isLatestVersion: true,
+          isSigned: false
+        },
+        {
+          id: '3',
+          name: 'Licencia de Construcción Proyecto Central',
+          description: 'Licencia expedida por Planeación Municipal para el proyecto Central',
+          category: 'permiso',
+          status: 'aprobado',
+          fileName: 'licencia_construccion_central.pdf',
+          fileSize: 890456,
+          mimeType: 'application/pdf',
+          version: '1.0',
+          extractedText: 'LICENCIA DE CONSTRUCCIÓN No. LC-2024-0385 - Se autoriza a CONSTRUCTORA YCM360 S.A.S. para adelantar obras de construcción en el predio ubicado en la dirección Calle 45 No. 23-67...',
+          ocrStatus: 'completed',
+          ocrConfidence: 0.94,
+          tags: ['licencia', 'construccion', 'proyecto-central', 'planeacion'],
+          projectId: 'proj-2',
+          createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+          isLatestVersion: true,
+          isSigned: true
+        },
+        {
+          id: '4',
+          name: 'Presupuesto Detallado Q1 2024',
+          description: 'Presupuesto trimestral con desglose por categorías y proyectos',
+          category: 'presupuesto',
+          status: 'borrador',
+          fileName: 'presupuesto_q1_2024.xlsx',
+          fileSize: 567234,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          version: '1.3',
+          extractedText: 'PRESUPUESTO Q1 2024 - Total presupuestado: $4.250.000.000 - Materiales: $2.550.000.000 - Mano de obra: $1.275.000.000 - Gastos generales: $425.000.000...',
+          ocrStatus: 'processing',
+          ocrConfidence: 0.82,
+          tags: ['presupuesto', 'q1-2024', 'financiero'],
+          projectId: null,
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          isLatestVersion: true,
+          isSigned: false
+        }
+      ];
+      
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      res.status(500).json({ error: 'Failed to fetch documents' });
+    }
+  });
+
+  app.get('/api/document-templates', async (req, res) => {
+    try {
+      // Mock document templates
+      const templates = [
+        {
+          id: '1',
+          name: 'Contrato de Compraventa Estándar',
+          description: 'Plantilla estándar para contratos de compraventa de lotes',
+          category: 'contrato',
+          fields: [
+            { name: 'buyer_name', label: 'Nombre del Comprador', type: 'text', required: true },
+            { name: 'lot_number', label: 'Número de Lote', type: 'text', required: true },
+            { name: 'sale_price', label: 'Precio de Venta', type: 'currency', required: true },
+            { name: 'payment_terms', label: 'Términos de Pago', type: 'select', options: ['Contado', 'Financiado', 'Mixto'] }
+          ],
+          approvalWorkflow: {
+            steps: [
+              { role: 'legal', name: 'Revisión Legal' },
+              { role: 'commercial', name: 'Aprobación Comercial' },
+              { role: 'management', name: 'Aprobación Gerencial' }
+            ]
+          },
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: '2',
+          name: 'Solicitud de Permiso Municipal',
+          description: 'Plantilla para solicitudes de permisos ante entidades municipales',
+          category: 'permiso',
+          fields: [
+            { name: 'permit_type', label: 'Tipo de Permiso', type: 'select', required: true },
+            { name: 'project_address', label: 'Dirección del Proyecto', type: 'text', required: true },
+            { name: 'construction_area', label: 'Área de Construcción', type: 'number', required: true },
+            { name: 'expected_duration', label: 'Duración Estimada', type: 'text', required: true }
+          ],
+          approvalWorkflow: {
+            steps: [
+              { role: 'technical', name: 'Revisión Técnica' },
+              { role: 'legal', name: 'Revisión Legal' }
+            ]
+          },
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: '3',
+          name: 'Reporte de Presupuesto Mensual',
+          description: 'Plantilla para reportes mensuales de presupuesto y gastos',
+          category: 'presupuesto',
+          fields: [
+            { name: 'reporting_period', label: 'Período de Reporte', type: 'date', required: true },
+            { name: 'total_budget', label: 'Presupuesto Total', type: 'currency', required: true },
+            { name: 'spent_amount', label: 'Monto Ejecutado', type: 'currency', required: true },
+            { name: 'variance_analysis', label: 'Análisis de Variaciones', type: 'textarea' }
+          ],
+          approvalWorkflow: {
+            steps: [
+              { role: 'accounting', name: 'Revisión Contable' },
+              { role: 'finance', name: 'Aprobación Financiera' }
+            ]
+          },
+          isActive: true,
+          createdAt: new Date()
+        }
+      ];
+      
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching document templates:', error);
+      res.status(500).json({ error: 'Failed to fetch templates' });
+    }
+  });
+
+  app.post('/api/documents/upload', async (req, res) => {
+    try {
+      // In real implementation, use documentService
+      const mockDocument = {
+        id: Date.now().toString(),
+        name: 'Documento subido',
+        status: 'borrador',
+        version: '1.0',
+        ocrStatus: 'pending',
+        createdAt: new Date(),
+        message: 'Documento subido exitosamente. El procesamiento OCR iniciará automáticamente.'
+      };
+      
+      res.json(mockDocument);
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      res.status(500).json({ error: 'Failed to upload document' });
+    }
+  });
+
+  app.post('/api/documents/:documentId/approval', async (req, res) => {
+    try {
+      const { documentId } = req.params;
+      const workflow = req.body;
+      
+      // In real implementation, use documentService
+      const approvalWorkflow = {
+        id: Date.now().toString(),
+        documentId,
+        workflowName: workflow.name,
+        status: 'in_progress',
+        currentStep: 0,
+        totalSteps: 3,
+        createdAt: new Date()
+      };
+      
+      res.json(approvalWorkflow);
+    } catch (error) {
+      console.error('Error starting approval workflow:', error);
+      res.status(500).json({ error: 'Failed to start approval workflow' });
+    }
+  });
+
+  app.get('/api/documents/:documentId', async (req, res) => {
+    try {
+      const { documentId } = req.params;
+      
+      // Mock detailed document data
+      const documentDetails = {
+        document: {
+          id: documentId,
+          name: 'Contrato de Compraventa - Lote 15A',
+          description: 'Contrato firmado para la venta del lote 15A',
+          extractedText: 'Contenido completo extraído por OCR...',
+          ocrConfidence: 0.96
+        },
+        versions: [
+          { version: '2.1', createdAt: new Date(), changes: 'Corrección en cláusula 5.2' },
+          { version: '2.0', createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), changes: 'Actualización de términos' }
+        ],
+        workflows: [
+          { id: '1', workflowName: 'Aprobación Legal', status: 'approved', completedAt: new Date() }
+        ],
+        activities: [
+          { action: 'approved', user: { firstName: 'Ana', lastName: 'García' }, createdAt: new Date() },
+          { action: 'viewed', user: { firstName: 'Carlos', lastName: 'López' }, createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) }
+        ]
+      };
+      
+      res.json(documentDetails);
+    } catch (error) {
+      console.error('Error fetching document details:', error);
+      res.status(500).json({ error: 'Failed to fetch document details' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
