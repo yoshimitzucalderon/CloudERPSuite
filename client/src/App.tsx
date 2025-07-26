@@ -15,6 +15,7 @@ import Documents from "@/pages/Documents";
 import Users from "@/pages/Users";
 import ProjectManagement from "@/pages/ProjectManagement";
 import Commercial from "@/pages/Commercial";
+import Authorizations from "@/pages/Authorizations";
 import Layout from "@/components/Layout";
 
 function Router() {
@@ -35,6 +36,7 @@ function Router() {
           <Route path="/users" component={Users} />
           <Route path="/project-management" component={ProjectManagement} />
           <Route path="/commercial" component={Commercial} />
+          <Route path="/authorizations" component={Authorizations} />
         </Layout>
       )}
       <Route component={NotFound} />

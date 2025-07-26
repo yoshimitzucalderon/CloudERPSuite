@@ -432,6 +432,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Authorization Workflow Routes
+  app.get('/api/authorizations', isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId as string;
+      const workflows = await storage.getAuthorizationWorkflows(projectId);
+      res.json(workflows);
+    } catch (error) {
+      console.error("Error fetching authorization workflows:", error);
+      res.status(500).json({ message: "Failed to fetch authorization workflows" });
+    }
+  });
+
+  app.post('/api/authorizations', isAuthenticated, async (req: any, res) => {
+    try {
+      const workflowData = {
+        ...req.body,
+        requestedBy: req.user.claims.sub,
+      };
+      const result = insertAuthorizationWorkflowSchema.safeParse(workflowData);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const workflow = await storage.createAuthorizationWorkflow(result.data);
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error creating authorization workflow:", error);
+      res.status(500).json({ message: "Failed to create authorization workflow" });
+    }
+  });
+
+  app.put('/api/authorizations/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = insertAuthorizationWorkflowSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const workflow = await storage.updateAuthorizationWorkflow(id, result.data);
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error updating authorization workflow:", error);
+      res.status(500).json({ message: "Failed to update authorization workflow" });
+    }
+  });
+
+  app.get('/api/authorizations/:id/steps', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const steps = await storage.getAuthorizationSteps(id);
+      res.json(steps);
+    } catch (error) {
+      console.error("Error fetching authorization steps:", error);
+      res.status(500).json({ message: "Failed to fetch authorization steps" });
+    }
+  });
+
+  app.post('/api/authorizations/:id/steps', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const stepData = {
+        ...req.body,
+        workflowId: id,
+        approverId: req.user.claims.sub,
+      };
+      const result = insertAuthorizationStepSchema.safeParse(stepData);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const step = await storage.createAuthorizationStep(result.data);
+      res.json(step);
+    } catch (error) {
+      console.error("Error creating authorization step:", error);
+      res.status(500).json({ message: "Failed to create authorization step" });
+    }
+  });
+
+  // Investor Routes
+  app.get('/api/investors', isAuthenticated, async (req, res) => {
+    try {
+      const investors = await storage.getInvestors();
+      res.json(investors);
+    } catch (error) {
+      console.error("Error fetching investors:", error);
+      res.status(500).json({ message: "Failed to fetch investors" });
+    }
+  });
+
+  app.post('/api/investors', isAuthenticated, async (req, res) => {
+    try {
+      const result = insertInvestorSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const investor = await storage.createInvestor(result.data);
+      res.json(investor);
+    } catch (error) {
+      console.error("Error creating investor:", error);
+      res.status(500).json({ message: "Failed to create investor" });
+    }
+  });
+
+  // Capital Call Routes
+  app.get('/api/capital-calls/:projectId', isAuthenticated, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const capitalCalls = await storage.getCapitalCalls(projectId);
+      res.json(capitalCalls);
+    } catch (error) {
+      console.error("Error fetching capital calls:", error);
+      res.status(500).json({ message: "Failed to fetch capital calls" });
+    }
+  });
+
+  app.post('/api/capital-calls', isAuthenticated, async (req: any, res) => {
+    try {
+      const capitalCallData = {
+        ...req.body,
+        createdBy: req.user.claims.sub,
+      };
+      const result = insertCapitalCallSchema.safeParse(capitalCallData);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const capitalCall = await storage.createCapitalCall(result.data);
+      res.json(capitalCall);
+    } catch (error) {
+      console.error("Error creating capital call:", error);
+      res.status(500).json({ message: "Failed to create capital call" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

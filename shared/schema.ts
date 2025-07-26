@@ -178,11 +178,16 @@ export const lotStatusEnum = pgEnum('lot_status', [
 export const lots = pgTable("lots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id),
-  number: varchar("number").notNull(),
-  area: integer("area").notNull(),
-  price: varchar("price").notNull(),
+  lotNumber: varchar("lot_number").notNull(),
+  block: varchar("block"),
+  area: decimal("area", { precision: 10, scale: 2 }),
+  pricePerM2: decimal("price_per_m2", { precision: 10, scale: 2 }),
+  totalPrice: decimal("total_price", { precision: 15, scale: 2 }),
   status: lotStatusEnum("status").notNull().default('disponible'),
-  location: varchar("location"),
+  characteristics: text("characteristics"),
+  reservedBy: varchar("reserved_by"),
+  reservedDate: timestamp("reserved_date"),
+  soldDate: timestamp("sold_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -230,6 +235,74 @@ export const salesContracts = pgTable("sales_contracts", {
   status: contractStatusEnum("status").notNull().default('borrador'),
   signedDate: timestamp("signed_date"),
   deliveryDate: timestamp("delivery_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Authorization workflow status and type enums
+export const authorizationStatusEnum = pgEnum('authorization_status', [
+  'pendiente', 'en_revision', 'aprobado', 'rechazado', 'cancelado'
+]);
+
+export const workflowTypeEnum = pgEnum('workflow_type', [
+  'presupuesto', 'contrato', 'pago', 'cambio_orden', 'compra'
+]);
+
+// Authorization workflows table
+export const authorizationWorkflows = pgTable("authorization_workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id),
+  workflowType: workflowTypeEnum("workflow_type").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  amount: varchar("amount"),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id),
+  currentApprover: varchar("current_approver").references(() => users.id),
+  status: authorizationStatusEnum("status").notNull().default('pendiente'),
+  priority: varchar("priority").default('medium'),
+  dueDate: timestamp("due_date"),
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Authorization steps table
+export const authorizationSteps = pgTable("authorization_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => authorizationWorkflows.id),
+  approverId: varchar("approver_id").notNull().references(() => users.id),
+  action: varchar("action").notNull(),
+  comments: text("comments"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// Investors table for capital management
+export const investors = pgTable("investors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  investorType: varchar("investor_type").default('individual'),
+  taxId: varchar("tax_id"),
+  totalCommitment: varchar("total_commitment").default('0'),
+  totalContributed: varchar("total_contributed").default('0'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Capital calls table
+export const capitalCalls = pgTable("capital_calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id),
+  callNumber: integer("call_number").notNull(),
+  totalAmount: varchar("total_amount").notNull(),
+  callDate: timestamp("call_date").notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  purpose: text("purpose"),
+  status: varchar("status").default('pendiente'),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -346,6 +419,44 @@ export const salesContractsRelations = relations(salesContracts, ({ one }) => ({
   }),
 }));
 
+export const authorizationWorkflowsRelations = relations(authorizationWorkflows, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [authorizationWorkflows.projectId],
+    references: [projects.id],
+  }),
+  requestedBy: one(users, {
+    fields: [authorizationWorkflows.requestedBy],
+    references: [users.id],
+  }),
+  currentApprover: one(users, {
+    fields: [authorizationWorkflows.currentApprover],
+    references: [users.id],
+  }),
+  steps: many(authorizationSteps),
+}));
+
+export const authorizationStepsRelations = relations(authorizationSteps, ({ one }) => ({
+  workflow: one(authorizationWorkflows, {
+    fields: [authorizationSteps.workflowId],
+    references: [authorizationWorkflows.id],
+  }),
+  approver: one(users, {
+    fields: [authorizationSteps.approverId],
+    references: [users.id],
+  }),
+}));
+
+export const capitalCallsRelations = relations(capitalCalls, ({ one }) => ({
+  project: one(projects, {
+    fields: [capitalCalls.projectId],
+    references: [projects.id],
+  }),
+  createdBy: one(users, {
+    fields: [capitalCalls.createdBy],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -410,6 +521,29 @@ export const insertSalesContractSchema = createInsertSchema(salesContracts).omit
   updatedAt: true,
 });
 
+export const insertAuthorizationWorkflowSchema = createInsertSchema(authorizationWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAuthorizationStepSchema = createInsertSchema(authorizationSteps).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertInvestorSchema = createInsertSchema(investors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCapitalCallSchema = createInsertSchema(capitalCalls).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -433,3 +567,11 @@ export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertSalesContract = z.infer<typeof insertSalesContractSchema>;
 export type SalesContract = typeof salesContracts.$inferSelect;
+export type InsertAuthorizationWorkflow = z.infer<typeof insertAuthorizationWorkflowSchema>;
+export type AuthorizationWorkflow = typeof authorizationWorkflows.$inferSelect;
+export type InsertAuthorizationStep = z.infer<typeof insertAuthorizationStepSchema>;
+export type AuthorizationStep = typeof authorizationSteps.$inferSelect;
+export type InsertInvestor = z.infer<typeof insertInvestorSchema>;
+export type Investor = typeof investors.$inferSelect;
+export type InsertCapitalCall = z.infer<typeof insertCapitalCallSchema>;
+export type CapitalCall = typeof capitalCalls.$inferSelect;

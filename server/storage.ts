@@ -388,7 +388,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(lots)
       .where(eq(lots.projectId, projectId))
-      .orderBy(lots.number);
+      .orderBy(lots.lotNumber);
   }
 
   async createLot(lot: InsertLot): Promise<Lot> {
@@ -440,6 +440,104 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return newContract;
+  }
+
+  // Authorization workflows
+  async getAuthorizationWorkflows(projectId?: string): Promise<AuthorizationWorkflow[]> {
+    if (projectId) {
+      return await db
+        .select()
+        .from(authorizationWorkflows)
+        .where(eq(authorizationWorkflows.projectId, projectId))
+        .orderBy(authorizationWorkflows.createdAt);
+    }
+    return await db
+      .select()
+      .from(authorizationWorkflows)
+      .orderBy(authorizationWorkflows.createdAt);
+  }
+
+  async createAuthorizationWorkflow(workflow: InsertAuthorizationWorkflow): Promise<AuthorizationWorkflow> {
+    const [newWorkflow] = await db
+      .insert(authorizationWorkflows)
+      .values({
+        ...workflow,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newWorkflow;
+  }
+
+  async updateAuthorizationWorkflow(id: string, workflow: Partial<InsertAuthorizationWorkflow>): Promise<AuthorizationWorkflow | undefined> {
+    const [updatedWorkflow] = await db
+      .update(authorizationWorkflows)
+      .set({
+        ...workflow,
+        updatedAt: new Date(),
+      })
+      .where(eq(authorizationWorkflows.id, id))
+      .returning();
+    return updatedWorkflow;
+  }
+
+  async getAuthorizationSteps(workflowId: string): Promise<AuthorizationStep[]> {
+    return await db
+      .select()
+      .from(authorizationSteps)
+      .where(eq(authorizationSteps.workflowId, workflowId))
+      .orderBy(authorizationSteps.timestamp);
+  }
+
+  async createAuthorizationStep(step: InsertAuthorizationStep): Promise<AuthorizationStep> {
+    const [newStep] = await db
+      .insert(authorizationSteps)
+      .values({
+        ...step,
+        timestamp: new Date(),
+      })
+      .returning();
+    return newStep;
+  }
+
+  // Investors and Capital Calls
+  async getInvestors(): Promise<Investor[]> {
+    return await db
+      .select()
+      .from(investors)
+      .orderBy(investors.name);
+  }
+
+  async createInvestor(investor: InsertInvestor): Promise<Investor> {
+    const [newInvestor] = await db
+      .insert(investors)
+      .values({
+        ...investor,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newInvestor;
+  }
+
+  async getCapitalCalls(projectId: string): Promise<CapitalCall[]> {
+    return await db
+      .select()
+      .from(capitalCalls)
+      .where(eq(capitalCalls.projectId, projectId))
+      .orderBy(capitalCalls.callNumber);
+  }
+
+  async createCapitalCall(capitalCall: InsertCapitalCall): Promise<CapitalCall> {
+    const [newCapitalCall] = await db
+      .insert(capitalCalls)
+      .values({
+        ...capitalCall,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newCapitalCall;
   }
 }
 
