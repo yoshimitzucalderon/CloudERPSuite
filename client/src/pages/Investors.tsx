@@ -639,7 +639,11 @@ export default function Investors() {
                 </TableHeader>
                 <TableBody>
                   {(capitalCalls as CapitalCall[]).map((call: CapitalCall) => (
-                    <TableRow key={call.id}>
+                    <TableRow 
+                      key={call.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => window.location.href = `/investors/capital-call/${call.id}`}
+                    >
                       <TableCell className="font-mono">#{call.callNumber}</TableCell>
                       <TableCell>
                         {(projects as any[]).find((p: any) => p.id === call.projectId)?.name || 'N/A'}

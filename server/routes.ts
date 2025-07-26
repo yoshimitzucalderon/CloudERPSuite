@@ -1701,32 +1701,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
         {
           id: "cc-1",
           projectId: "5670e9b8-33e6-4a13-9102-ef62cb47fc0a",
-          callNumber: 1,
-          totalAmount: "5000000",
-          callDate: new Date("2024-02-01"),
-          dueDate: new Date("2024-02-15"),
-          purpose: "Inicio de construcción - Fase 1",
+          callNumber: "CC-2024-001",
+          totalAmount: "3292515",
+          callDate: new Date("2024-07-31"),
+          dueDate: new Date("2024-08-15"),
+          purpose: "Capital Call para gastos operativos y desarrollo - Julio 2024",
           status: "pendiente",
           createdBy: "45547572",
-          createdAt: new Date("2024-01-25")
-        },
-        {
-          id: "cc-2",
-          projectId: "5670e9b8-33e6-4a13-9102-ef62cb47fc0a", 
-          callNumber: 2,
-          totalAmount: "3500000",
-          callDate: new Date("2024-03-01"),
-          dueDate: new Date("2024-03-15"),
-          purpose: "Adquisición de materiales especializados",
-          status: "pagado_completo",
-          createdBy: "45547572",
-          createdAt: new Date("2024-02-20")
+          createdAt: new Date("2024-07-25"),
+          items: [
+            { id: "1", responsible: "ER", sequence: 1, concept: "Proyectos y derechos - Recibo de pago por exención de descarga aguas residuales", provider: "Comisión Estatal de Servicios Públicos del T", amount: "841.50", dueDate: new Date("2024-07-31"), includesVAT: false, notes: "No incluye IVA" },
+            { id: "2", responsible: "ER", sequence: 2, concept: "Estudios y preliminares - Carta de no afectación al licencia de operatividad Everest", provider: "Heka Codesa S.A. de C.V.", amount: "20000.00", dueDate: new Date("2024-07-31"), includesVAT: true, notes: "Incluye IVA" },
+            { id: "3", responsible: "ER", sequence: 3, concept: "Impuestos y derechos - Recibo de derecho de pago por licencia de demolición", provider: "H. Ayuntamiento de Tijuana", amount: "2942.00", dueDate: new Date("2024-07-31"), includesVAT: true, notes: "Incluye IVA" }
+          ],
+          authorizations: [
+            { step: 1, stepType: "elabora", userName: "Yoshimitsu Calderón", userTitle: "Project Manager", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "firmado", signedAt: new Date("2024-07-25") },
+            { step: 2, stepType: "autoriza", userName: "Ana Cecilia Campos", userTitle: "Directora de Desarrollo", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "pendiente" },
+            { step: 3, stepType: "autoriza", userName: "Yoshimitsu Calderón", userTitle: "Director de Administración y Finanzas", company: "", status: "pendiente" },
+            { step: 4, stepType: "autoriza", userName: "Juan Núñez", userTitle: "Socio Director", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "pendiente" },
+            { step: 5, stepType: "autoriza", userName: "Javier Gómez", userTitle: "Investment Manager", company: "CI Capital Partners", status: "pendiente" }
+          ],
+          budgetExecution: [
+            { budgetCategory: "Trámites y permisos", previousAccumulated: "322045", thisCapitalCall: "20500", currentAccumulated: "342545" },
+            { budgetCategory: "Impuestos y derechos", previousAccumulated: "326852", thisCapitalCall: "5609", currentAccumulated: "332461" },
+            { budgetCategory: "Diseño (Arquitectura e ingenierías)", previousAccumulated: "7050779", thisCapitalCall: "706578", currentAccumulated: "7757357" },
+            { budgetCategory: "Estudios y preliminares", previousAccumulated: "2776652", thisCapitalCall: "379439", currentAccumulated: "3156091" }
+          ]
         }
       ];
       res.json(mockCapitalCalls);
     } catch (error) {
       console.error("Error fetching capital calls:", error);
       res.status(500).json({ message: "Failed to fetch capital calls" });
+    }
+  });
+
+  app.get('/api/capital-calls/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      // Mock detailed capital call - normally would fetch from database
+      const mockDetailedCapitalCall = {
+        id: "cc-1",
+        projectId: "5670e9b8-33e6-4a13-9102-ef62cb47fc0a",
+        callNumber: "CC-2024-001",
+        totalAmount: "3292515",
+        callDate: new Date("2024-07-31"),
+        dueDate: new Date("2024-08-15"),
+        purpose: "Capital Call para gastos operativos y desarrollo - Julio 2024",
+        status: "pendiente",
+        createdBy: "45547572",
+        createdAt: new Date("2024-07-25"),
+        items: [
+          { id: "1", responsible: "ER", sequence: 1, concept: "Proyectos y derechos - Recibo de pago por exención de descarga aguas residuales", provider: "Comisión Estatal de Servicios Públicos del T", amount: "841.50", dueDate: new Date("2024-07-31"), includesVAT: false, notes: "No incluye IVA" },
+          { id: "2", responsible: "ER", sequence: 2, concept: "Estudios y preliminares - Carta de no afectación al licencia de operatividad Everest", provider: "Heka Codesa S.A. de C.V.", amount: "20000.00", dueDate: new Date("2024-07-31"), includesVAT: true, notes: "Incluye IVA" },
+          { id: "3", responsible: "ER", sequence: 3, concept: "Impuestos y derechos - Recibo de derecho de pago por licencia de demolición", provider: "H. Ayuntamiento de Tijuana", amount: "2942.00", dueDate: new Date("2024-07-31"), includesVAT: true, notes: "Incluye IVA" },
+          { id: "4", responsible: "ER", sequence: 4, concept: "Impuestos y derechos - Recibo de derecho de pago por licencia de demolición", provider: "H. Ayuntamiento de Tijuana", amount: "1822.50", dueDate: new Date("2024-07-31"), includesVAT: true, notes: "Incluye IVA" }
+        ],
+        authorizations: [
+          { step: 1, stepType: "elabora", userName: "Yoshimitsu Calderón", userTitle: "Project Manager", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "firmado", signedAt: new Date("2024-07-25") },
+          { step: 2, stepType: "autoriza", userName: "Ana Cecilia Campos", userTitle: "Directora de Desarrollo", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "pendiente" },
+          { step: 3, stepType: "autoriza", userName: "Yoshimitsu Calderón", userTitle: "Director de Administración y Finanzas", company: "", status: "pendiente" },
+          { step: 4, stepType: "autoriza", userName: "Juan Núñez", userTitle: "Socio Director", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "pendiente" },
+          { step: 5, stepType: "autoriza", userName: "Javier Gómez", userTitle: "Investment Manager", company: "CI Capital Partners", status: "pendiente" }
+        ],
+        budgetExecution: [
+          { budgetCategory: "Trámites y permisos", previousAccumulated: "322045", thisCapitalCall: "20500", currentAccumulated: "342545" },
+          { budgetCategory: "Impuestos y derechos", previousAccumulated: "326852", thisCapitalCall: "5609", currentAccumulated: "332461" },
+          { budgetCategory: "Diseño (Arquitectura e ingenierías)", previousAccumulated: "7050779", thisCapitalCall: "706578", currentAccumulated: "7757357" },
+          { budgetCategory: "Estudios y preliminares", previousAccumulated: "2776652", thisCapitalCall: "379439", currentAccumulated: "3156091" },
+          { budgetCategory: "Marketing y comercialización", previousAccumulated: "8645836", thisCapitalCall: "1486307", currentAccumulated: "10132144" },
+          { budgetCategory: "Honorarios desarrollo", previousAccumulated: "4882872", thisCapitalCall: "371976", currentAccumulated: "5254848" },
+          { budgetCategory: "Gestión general", previousAccumulated: "571089", thisCapitalCall: "2875", currentAccumulated: "573964" },
+          { budgetCategory: "Honorarios profesionales", previousAccumulated: "352020", thisCapitalCall: "17114", currentAccumulated: "369134" },
+          { budgetCategory: "Anticipo utilidades Bujazan", previousAccumulated: "1273213", thisCapitalCall: "302118", currentAccumulated: "1575331" }
+        ]
+      };
+      
+      if (id === "cc-1") {
+        res.json(mockDetailedCapitalCall);
+      } else {
+        res.status(404).json({ message: "Capital call not found" });
+      }
+    } catch (error) {
+      console.error("Error fetching capital call:", error);
+      res.status(500).json({ message: "Failed to fetch capital call" });
     }
   });
 

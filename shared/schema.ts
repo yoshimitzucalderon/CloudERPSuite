@@ -1049,6 +1049,48 @@ export const capitalCalls = pgTable("capital_calls", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Capital Call Line Items (detailed breakdown like in your images)
+export const capitalCallItems = pgTable("capital_call_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  capitalCallId: varchar("capital_call_id").references(() => capitalCalls.id, { onDelete: "cascade" }),
+  responsible: varchar("responsible").notNull(), // e.g., "ER", "SD", "AZ"
+  sequence: integer("sequence").notNull(), // Item number (1, 2, 3...)
+  concept: text("concept").notNull(), // Description of the expense
+  provider: varchar("provider"), // Company providing the service
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  dueDate: timestamp("due_date"),
+  includesVAT: boolean("includes_vat").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Capital Call Authorizations (signature workflow like in your images)
+export const capitalCallAuthorizations = pgTable("capital_call_authorizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  capitalCallId: varchar("capital_call_id").references(() => capitalCalls.id, { onDelete: "cascade" }),
+  step: integer("step").notNull(), // 1: Elabora, 2-5: Autoriza
+  stepType: varchar("step_type", { enum: ["elabora", "autoriza"] }).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  userTitle: varchar("user_title"), // e.g., "Project Manager", "Director de Desarrollo"
+  userName: varchar("user_name").notNull(),
+  company: varchar("company"), // e.g., "Red Oak Ventures, S.A.P.I. de C.V."
+  signedAt: timestamp("signed_at"),
+  status: varchar("status", { enum: ["pendiente", "firmado", "rechazado"] }).default("pendiente"),
+  comments: text("comments"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Budget Execution Summary (presupuesto ejecutado like in your images)
+export const budgetExecution = pgTable("budget_execution", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  capitalCallId: varchar("capital_call_id").references(() => capitalCalls.id, { onDelete: "cascade" }),
+  budgetCategory: varchar("budget_category").notNull(), // e.g., "Trámites y permisos"
+  previousAccumulated: decimal("previous_accumulated", { precision: 15, scale: 2 }).default("0"),
+  thisCapitalCall: decimal("this_capital_call", { precision: 15, scale: 2 }).default("0"),
+  currentAccumulated: decimal("current_accumulated", { precision: 15, scale: 2 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Individual capital call notices to investors
 export const capitalCallNotices = pgTable("capital_call_notices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1195,6 +1237,9 @@ export const insertCapitalCallSchema = createInsertSchema(capitalCalls).omit({ i
 export const insertCapitalCallNoticeSchema = createInsertSchema(capitalCallNotices).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertInvestorDistributionSchema = createInsertSchema(investorDistributions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertRoiReportSchema = createInsertSchema(roiReports).omit({ id: true, generatedAt: true });
+export const insertCapitalCallItemSchema = createInsertSchema(capitalCallItems).omit({ id: true, createdAt: true });
+export const insertCapitalCallAuthorizationSchema = createInsertSchema(capitalCallAuthorizations).omit({ id: true, createdAt: true });
+export const insertBudgetExecutionSchema = createInsertSchema(budgetExecution).omit({ id: true, createdAt: true });
 
 // Insert types for investors
 export type InsertInvestor = z.infer<typeof insertInvestorSchema>;
@@ -1203,6 +1248,12 @@ export type InsertCapitalCall = z.infer<typeof insertCapitalCallSchema>;
 export type InsertCapitalCallNotice = z.infer<typeof insertCapitalCallNoticeSchema>;
 export type InsertInvestorDistribution = z.infer<typeof insertInvestorDistributionSchema>;
 export type InsertRoiReport = z.infer<typeof insertRoiReportSchema>;
+export type CapitalCallItem = typeof capitalCallItems.$inferSelect;
+export type CapitalCallAuthorization = typeof capitalCallAuthorizations.$inferSelect;
+export type BudgetExecution = typeof budgetExecution.$inferSelect;
+export type InsertCapitalCallItem = z.infer<typeof insertCapitalCallItemSchema>;
+export type InsertCapitalCallAuthorization = z.infer<typeof insertCapitalCallAuthorizationSchema>;
+export type InsertBudgetExecution = z.infer<typeof insertBudgetExecutionSchema>;
 
 // Project Management and Critical Path Tables
 export const projectTasks = pgTable("project_tasks", {
