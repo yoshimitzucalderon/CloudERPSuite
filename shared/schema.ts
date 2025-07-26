@@ -278,6 +278,70 @@ export const authorizationSteps = pgTable("authorization_steps", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// Advanced authorization system tables
+export const approvalLevelsEnum = pgEnum('approval_level', [
+  'operativo', 'supervisor', 'gerente', 'director', 'ejecutivo'
+]);
+
+// Authorization matrix for multi-level approvals
+export const authorizationMatrix = pgTable("authorization_matrix", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowType: workflowTypeEnum("workflow_type").notNull(),
+  minAmount: varchar("min_amount").default('0'),
+  maxAmount: varchar("max_amount"),
+  requiredLevel: approvalLevelsEnum("required_level").notNull(),
+  requiresSequential: boolean("requires_sequential").default(false),
+  escalationHours: integer("escalation_hours").default(24),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Multi-level workflow steps
+export const workflowSteps = pgTable("workflow_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => authorizationWorkflows.id),
+  stepOrder: integer("step_order").notNull(),
+  approverLevel: approvalLevelsEnum("approver_level").notNull(),
+  assignedApproverId: varchar("assigned_approver_id").references(() => users.id),
+  isRequired: boolean("is_required").default(true),
+  status: authorizationStatusEnum("status").default('pendiente'),
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  comments: text("comments"),
+  escalatedAt: timestamp("escalated_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Authority delegation system
+export const authorityDelegations = pgTable("authority_delegations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  delegatorId: varchar("delegator_id").notNull().references(() => users.id),
+  delegateId: varchar("delegate_id").notNull().references(() => users.id),
+  workflowTypes: varchar("workflow_types").array(), // Array of workflow types
+  maxAmount: varchar("max_amount"),
+  validFrom: timestamp("valid_from").notNull(),
+  validUntil: timestamp("valid_until").notNull(),
+  isActive: boolean("is_active").default(true),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Workflow notifications and escalations
+export const workflowNotifications = pgTable("workflow_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => authorizationWorkflows.id),
+  recipientId: varchar("recipient_id").notNull().references(() => users.id),
+  notificationType: varchar("notification_type").notNull(), // 'reminder', 'escalation', 'approval_required'
+  message: text("message").notNull(),
+  sentAt: timestamp("sent_at"),
+  readAt: timestamp("read_at"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Investors table for capital management
 export const investors = pgTable("investors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -457,6 +521,39 @@ export const capitalCallsRelations = relations(capitalCalls, ({ one }) => ({
   }),
 }));
 
+export const workflowStepsRelations = relations(workflowSteps, ({ one }) => ({
+  workflow: one(authorizationWorkflows, {
+    fields: [workflowSteps.workflowId],
+    references: [authorizationWorkflows.id],
+  }),
+  assignedApprover: one(users, {
+    fields: [workflowSteps.assignedApproverId],
+    references: [users.id],
+  }),
+}));
+
+export const authorityDelegationsRelations = relations(authorityDelegations, ({ one }) => ({
+  delegator: one(users, {
+    fields: [authorityDelegations.delegatorId],
+    references: [users.id],
+  }),
+  delegate: one(users, {
+    fields: [authorityDelegations.delegateId],
+    references: [users.id],
+  }),
+}));
+
+export const workflowNotificationsRelations = relations(workflowNotifications, ({ one }) => ({
+  workflow: one(authorizationWorkflows, {
+    fields: [workflowNotifications.workflowId],
+    references: [authorizationWorkflows.id],
+  }),
+  recipient: one(users, {
+    fields: [workflowNotifications.recipientId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -544,6 +641,29 @@ export const insertCapitalCallSchema = createInsertSchema(capitalCalls).omit({
   updatedAt: true,
 });
 
+export const insertAuthorizationMatrixSchema = createInsertSchema(authorizationMatrix).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkflowStepSchema = createInsertSchema(workflowSteps).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAuthorityDelegationSchema = createInsertSchema(authorityDelegations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkflowNotificationSchema = createInsertSchema(workflowNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -575,3 +695,11 @@ export type InsertInvestor = z.infer<typeof insertInvestorSchema>;
 export type Investor = typeof investors.$inferSelect;
 export type InsertCapitalCall = z.infer<typeof insertCapitalCallSchema>;
 export type CapitalCall = typeof capitalCalls.$inferSelect;
+export type InsertAuthorizationMatrix = z.infer<typeof insertAuthorizationMatrixSchema>;
+export type AuthorizationMatrix = typeof authorizationMatrix.$inferSelect;
+export type InsertWorkflowStep = z.infer<typeof insertWorkflowStepSchema>;
+export type WorkflowStep = typeof workflowSteps.$inferSelect;
+export type InsertAuthorityDelegation = z.infer<typeof insertAuthorityDelegationSchema>;
+export type AuthorityDelegation = typeof authorityDelegations.$inferSelect;
+export type InsertWorkflowNotification = z.infer<typeof insertWorkflowNotificationSchema>;
+export type WorkflowNotification = typeof workflowNotifications.$inferSelect;

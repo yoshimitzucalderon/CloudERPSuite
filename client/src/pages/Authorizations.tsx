@@ -159,7 +159,7 @@ export default function Authorizations() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Proyecto</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Seleccionar proyecto" />
@@ -190,11 +190,12 @@ export default function Authorizations() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="presupuesto">Presupuesto</SelectItem>
-                            <SelectItem value="contrato">Contrato</SelectItem>
                             <SelectItem value="pago">Pago</SelectItem>
-                            <SelectItem value="cambio_orden">Cambio de Orden</SelectItem>
-                            <SelectItem value="compra">Compra</SelectItem>
+                            <SelectItem value="contratacion">Contratación</SelectItem>
+                            <SelectItem value="orden_cambio">Orden de Cambio</SelectItem>
+                            <SelectItem value="liberacion_credito">Liberación de Crédito</SelectItem>
+                            <SelectItem value="capital_call">Capital Call</SelectItem>
+
                           </SelectContent>
                         </Select>
                         <FormMessage />

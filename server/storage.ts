@@ -539,6 +539,271 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return newCapitalCall;
   }
+
+  // Advanced Multi-level Authorization System
+  
+  // Authorization Matrix Management
+  async getAuthorizationMatrix(): Promise<AuthorizationMatrix[]> {
+    return await db
+      .select()
+      .from(authorizationMatrix)
+      .where(eq(authorizationMatrix.isActive, true))
+      .orderBy(authorizationMatrix.workflowType, authorizationMatrix.minAmount);
+  }
+
+  async createAuthorizationMatrix(matrix: InsertAuthorizationMatrix): Promise<AuthorizationMatrix> {
+    const [newMatrix] = await db
+      .insert(authorizationMatrix)
+      .values({
+        ...matrix,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newMatrix;
+  }
+
+  async updateAuthorizationMatrix(id: string, matrix: Partial<InsertAuthorizationMatrix>): Promise<AuthorizationMatrix | undefined> {
+    const [updatedMatrix] = await db
+      .update(authorizationMatrix)
+      .set({
+        ...matrix,
+        updatedAt: new Date(),
+      })
+      .where(eq(authorizationMatrix.id, id))
+      .returning();
+    return updatedMatrix;
+  }
+
+  // Multi-level Workflow Steps
+  async getWorkflowSteps(workflowId: string): Promise<WorkflowStep[]> {
+    return await db
+      .select()
+      .from(workflowSteps)
+      .where(eq(workflowSteps.workflowId, workflowId))
+      .orderBy(workflowSteps.stepOrder);
+  }
+
+  async createWorkflowStep(step: InsertWorkflowStep): Promise<WorkflowStep> {
+    const [newStep] = await db
+      .insert(workflowSteps)
+      .values({
+        ...step,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newStep;
+  }
+
+  async updateWorkflowStep(id: string, step: Partial<InsertWorkflowStep>): Promise<WorkflowStep | undefined> {
+    const [updatedStep] = await db
+      .update(workflowSteps)
+      .set({
+        ...step,
+        updatedAt: new Date(),
+      })
+      .where(eq(workflowSteps.id, id))
+      .returning();
+    return updatedStep;
+  }
+
+  // Authority Delegation Management
+  async getActiveAuthorityDelegations(delegateId?: string): Promise<AuthorityDelegation[]> {
+    const now = new Date();
+    let query = db
+      .select()
+      .from(authorityDelegations)
+      .where(
+        and(
+          eq(authorityDelegations.isActive, true),
+          lte(authorityDelegations.validFrom, now),
+          gte(authorityDelegations.validUntil, now)
+        )
+      );
+
+    if (delegateId) {
+      query = query.where(eq(authorityDelegations.delegateId, delegateId));
+    }
+
+    return await query.orderBy(authorityDelegations.validFrom);
+  }
+
+  async createAuthorityDelegation(delegation: InsertAuthorityDelegation): Promise<AuthorityDelegation> {
+    const [newDelegation] = await db
+      .insert(authorityDelegations)
+      .values({
+        ...delegation,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newDelegation;
+  }
+
+  async revokeAuthorityDelegation(id: string): Promise<AuthorityDelegation | undefined> {
+    const [revokedDelegation] = await db
+      .update(authorityDelegations)
+      .set({
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(authorityDelegations.id, id))
+      .returning();
+    return revokedDelegation;
+  }
+
+  // Workflow Notifications
+  async getWorkflowNotifications(recipientId: string, unreadOnly = false): Promise<WorkflowNotification[]> {
+    let query = db
+      .select()
+      .from(workflowNotifications)
+      .where(
+        and(
+          eq(workflowNotifications.recipientId, recipientId),
+          eq(workflowNotifications.isActive, true)
+        )
+      );
+
+    if (unreadOnly) {
+      query = query.where(isNull(workflowNotifications.readAt));
+    }
+
+    return await query.orderBy(desc(workflowNotifications.createdAt));
+  }
+
+  async createWorkflowNotification(notification: InsertWorkflowNotification): Promise<WorkflowNotification> {
+    const [newNotification] = await db
+      .insert(workflowNotifications)
+      .values({
+        ...notification,
+        createdAt: new Date(),
+      })
+      .returning();
+    return newNotification;
+  }
+
+  async markNotificationAsRead(id: string): Promise<WorkflowNotification | undefined> {
+    const [readNotification] = await db
+      .update(workflowNotifications)
+      .set({
+        readAt: new Date(),
+      })
+      .where(eq(workflowNotifications.id, id))
+      .returning();
+    return readNotification;
+  }
+
+  // Advanced Authorization Logic
+  async determineRequiredApprovals(workflowType: string, amount: string): Promise<AuthorizationMatrix[]> {
+    const amountNum = parseFloat(amount || "0");
+    
+    return await db
+      .select()
+      .from(authorizationMatrix)
+      .where(
+        and(
+          eq(authorizationMatrix.workflowType, workflowType as any),
+          eq(authorizationMatrix.isActive, true),
+          or(
+            isNull(authorizationMatrix.minAmount),
+            lte(sql`CAST(${authorizationMatrix.minAmount} as DECIMAL)`, amountNum)
+          ),
+          or(
+            isNull(authorizationMatrix.maxAmount),
+            gte(sql`CAST(${authorizationMatrix.maxAmount} as DECIMAL)`, amountNum)
+          )
+        )
+      )
+      .orderBy(authorizationMatrix.requiredLevel);
+  }
+
+  async createMultiLevelWorkflow(workflowData: InsertAuthorizationWorkflow): Promise<{ workflow: AuthorizationWorkflow; steps: WorkflowStep[] }> {
+    // Create the main workflow
+    const workflow = await this.createAuthorizationWorkflow(workflowData);
+    
+    // Determine required approval levels
+    const requiredApprovals = await this.determineRequiredApprovals(
+      workflowData.workflowType,
+      workflowData.amount || "0"
+    );
+
+    // Create workflow steps for each required approval level
+    const steps: WorkflowStep[] = [];
+    for (let i = 0; i < requiredApprovals.length; i++) {
+      const approval = requiredApprovals[i];
+      const step = await this.createWorkflowStep({
+        workflowId: workflow.id,
+        stepOrder: i + 1,
+        approverLevel: approval.requiredLevel,
+        isRequired: true,
+        status: i === 0 ? 'pendiente' : 'pendiente', // First step is active, others wait
+      });
+      steps.push(step);
+    }
+
+    return { workflow, steps };
+  }
+
+  async getWorkflowsRequiringApproval(userId: string): Promise<AuthorizationWorkflow[]> {
+    // Get user's approval level and delegations
+    const user = await this.getUser(userId);
+    const delegations = await this.getActiveAuthorityDelegations(userId);
+    
+    // Find workflows where user can approve based on their level or delegations
+    return await db
+      .select({
+        id: authorizationWorkflows.id,
+        projectId: authorizationWorkflows.projectId,
+        workflowType: authorizationWorkflows.workflowType,
+        title: authorizationWorkflows.title,
+        description: authorizationWorkflows.description,
+        amount: authorizationWorkflows.amount,
+        requestedBy: authorizationWorkflows.requestedBy,
+        currentApprover: authorizationWorkflows.currentApprover,
+        status: authorizationWorkflows.status,
+        priority: authorizationWorkflows.priority,
+        dueDate: authorizationWorkflows.dueDate,
+        approvedAt: authorizationWorkflows.approvedAt,
+        rejectedAt: authorizationWorkflows.rejectedAt,
+        rejectionReason: authorizationWorkflows.rejectionReason,
+        createdAt: authorizationWorkflows.createdAt,
+        updatedAt: authorizationWorkflows.updatedAt,
+      })
+      .from(authorizationWorkflows)
+      .innerJoin(workflowSteps, eq(workflowSteps.workflowId, authorizationWorkflows.id))
+      .where(
+        and(
+          eq(authorizationWorkflows.status, 'pendiente'),
+          eq(workflowSteps.status, 'pendiente'),
+          or(
+            eq(workflowSteps.assignedApproverId, userId),
+            eq(authorizationWorkflows.currentApprover, userId)
+          )
+        )
+      )
+      .orderBy(authorizationWorkflows.priority, authorizationWorkflows.createdAt);
+  }
+
+  async getAuthorizationWorkflow(id: string): Promise<AuthorizationWorkflow | undefined> {
+    const [workflow] = await db
+      .select()
+      .from(authorizationWorkflows)
+      .where(eq(authorizationWorkflows.id, id));
+    return workflow;
+  }
+
+  async updateAuthorizationWorkflow(id: string, workflow: Partial<InsertAuthorizationWorkflow>): Promise<AuthorizationWorkflow | undefined> {
+    const [updatedWorkflow] = await db
+      .update(authorizationWorkflows)
+      .set({
+        ...workflow,
+        updatedAt: new Date(),
+      })
+      .where(eq(authorizationWorkflows.id, id))
+      .returning();
+    return updatedWorkflow;
+  }
 }
 
 export const storage = new DatabaseStorage();

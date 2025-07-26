@@ -568,6 +568,217 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advanced Authorization System Routes
+
+  // Authorization Matrix Management
+  app.get('/api/authorization-matrix', isAuthenticated, async (req, res) => {
+    try {
+      const matrix = await storage.getAuthorizationMatrix();
+      res.json(matrix);
+    } catch (error) {
+      console.error("Error fetching authorization matrix:", error);
+      res.status(500).json({ message: "Failed to fetch authorization matrix" });
+    }
+  });
+
+  app.post('/api/authorization-matrix', isAuthenticated, async (req, res) => {
+    try {
+      const result = insertAuthorizationMatrixSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const matrix = await storage.createAuthorizationMatrix(result.data);
+      res.json(matrix);
+    } catch (error) {
+      console.error("Error creating authorization matrix:", error);
+      res.status(500).json({ message: "Failed to create authorization matrix" });
+    }
+  });
+
+  // Multi-level Workflow Creation
+  app.post('/api/authorizations/multi-level', isAuthenticated, async (req: any, res) => {
+    try {
+      const workflowData = {
+        ...req.body,
+        requestedBy: req.user.claims.sub,
+      };
+      const result = insertAuthorizationWorkflowSchema.safeParse(workflowData);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const { workflow, steps } = await storage.createMultiLevelWorkflow(result.data);
+      res.json({ workflow, steps });
+    } catch (error) {
+      console.error("Error creating multi-level workflow:", error);
+      res.status(500).json({ message: "Failed to create multi-level workflow" });
+    }
+  });
+
+  // Workflow Steps Management
+  app.get('/api/workflow-steps/:workflowId', isAuthenticated, async (req, res) => {
+    try {
+      const { workflowId } = req.params;
+      const steps = await storage.getWorkflowSteps(workflowId);
+      res.json(steps);
+    } catch (error) {
+      console.error("Error fetching workflow steps:", error);
+      res.status(500).json({ message: "Failed to fetch workflow steps" });
+    }
+  });
+
+  app.put('/api/workflow-steps/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const stepData = {
+        ...req.body,
+        assignedApproverId: req.user.claims.sub,
+      };
+      const result = insertWorkflowStepSchema.partial().safeParse(stepData);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const step = await storage.updateWorkflowStep(id, result.data);
+      res.json(step);
+    } catch (error) {
+      console.error("Error updating workflow step:", error);
+      res.status(500).json({ message: "Failed to update workflow step" });
+    }
+  });
+
+  // Authority Delegation Routes
+  app.get('/api/authority-delegations', isAuthenticated, async (req: any, res) => {
+    try {
+      const delegateId = req.query.delegateId || req.user.claims.sub;
+      const delegations = await storage.getActiveAuthorityDelegations(delegateId as string);
+      res.json(delegations);
+    } catch (error) {
+      console.error("Error fetching authority delegations:", error);
+      res.status(500).json({ message: "Failed to fetch authority delegations" });
+    }
+  });
+
+  app.post('/api/authority-delegations', isAuthenticated, async (req: any, res) => {
+    try {
+      const delegationData = {
+        ...req.body,
+        delegatorId: req.user.claims.sub,
+      };
+      const result = insertAuthorityDelegationSchema.safeParse(delegationData);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const delegation = await storage.createAuthorityDelegation(result.data);
+      res.json(delegation);
+    } catch (error) {
+      console.error("Error creating authority delegation:", error);
+      res.status(500).json({ message: "Failed to create authority delegation" });
+    }
+  });
+
+  app.delete('/api/authority-delegations/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const delegation = await storage.revokeAuthorityDelegation(id);
+      res.json(delegation);
+    } catch (error) {
+      console.error("Error revoking authority delegation:", error);
+      res.status(500).json({ message: "Failed to revoke authority delegation" });
+    }
+  });
+
+  // Workflow Notifications
+  app.get('/api/workflow-notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const unreadOnly = req.query.unreadOnly === 'true';
+      const notifications = await storage.getWorkflowNotifications(req.user.claims.sub, unreadOnly);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching workflow notifications:", error);
+      res.status(500).json({ message: "Failed to fetch workflow notifications" });
+    }
+  });
+
+  app.put('/api/workflow-notifications/:id/read', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Pending Approvals for Current User
+  app.get('/api/pending-approvals', isAuthenticated, async (req: any, res) => {
+    try {
+      const workflows = await storage.getWorkflowsRequiringApproval(req.user.claims.sub);
+      res.json(workflows);
+    } catch (error) {
+      console.error("Error fetching pending approvals:", error);
+      res.status(500).json({ message: "Failed to fetch pending approvals" });
+    }
+  });
+
+  // Workflow action processing (approve/reject)
+  app.post('/api/authorization-workflows/:id/action', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { action, comments } = req.body;
+      const userId = req.user.claims.sub;
+
+      // Get the current workflow
+      const workflow = await storage.getAuthorizationWorkflow(id);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+
+      // Update workflow status based on action
+      let updateData: any = {};
+      if (action === 'approve') {
+        updateData = {
+          status: 'aprobado',
+          approvedAt: new Date(),
+          currentApprover: null,
+        };
+      } else if (action === 'reject') {
+        updateData = {
+          status: 'rechazado',
+          rejectedAt: new Date(),
+          rejectionReason: comments || 'Rechazado por el aprobador',
+          currentApprover: null,
+        };
+      }
+
+      const updatedWorkflow = await storage.updateAuthorizationWorkflow(id, updateData);
+
+      // Create authorization step record
+      await storage.createAuthorizationStep({
+        workflowId: id,
+        approverId: userId,
+        action: action,
+        comments: comments || '',
+      });
+
+      // Create notification for requester
+      await storage.createWorkflowNotification({
+        workflowId: id,
+        recipientId: workflow.requestedBy,
+        notificationType: action === 'approve' ? 'approval_completed' : 'rejection',
+        message: `Tu solicitud "${workflow.title}" ha sido ${action === 'approve' ? 'aprobada' : 'rechazada'}.`,
+      });
+
+      res.json(updatedWorkflow);
+    } catch (error) {
+      console.error("Error processing workflow action:", error);
+      res.status(500).json({ message: "Failed to process workflow action" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

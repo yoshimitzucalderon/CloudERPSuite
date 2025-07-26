@@ -71,18 +71,18 @@ export function Sidebar() {
         <div className="p-4 border-t border-gray-200">
           <div className="flex items-center space-x-3">
             <img 
-              src={user?.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=32&h=32"} 
+              src={(user as any)?.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=32&h=32"} 
               alt="Usuario" 
               className="w-8 h-8 rounded-full object-cover"
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.firstName && user?.lastName 
-                  ? `${user.firstName} ${user.lastName}` 
-                  : user?.email || 'Usuario'}
+                {(user as any)?.firstName && (user as any)?.lastName 
+                  ? `${(user as any).firstName} ${(user as any).lastName}` 
+                  : (user as any)?.email || 'Usuario'}
               </p>
               <p className="text-xs text-gray-500 truncate">
-                {user?.role || 'Operativo'}
+                {(user as any)?.role || 'Operativo'}
               </p>
             </div>
             <button className="text-gray-400 hover:text-gray-600">
