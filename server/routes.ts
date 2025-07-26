@@ -1739,6 +1739,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/capital-calls/:id', isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
+      const { scenario } = req.query;
+      
+      // Import demo scenarios
+      const { authorizationScenarios } = await import('./demoScenarios');
+      
+      // Determine which authorization scenario to use
+      let authorizations = authorizationScenarios.pendingApproval.authorizations;
+      
+      switch (scenario) {
+        case 'canReverse':
+          authorizations = authorizationScenarios.canReverse.authorizations;
+          break;
+        case 'cannotReverse':
+          authorizations = authorizationScenarios.cannotReverse.authorizations;
+          break;
+        case 'readOnly':
+          authorizations = authorizationScenarios.readOnly.authorizations;
+          break;
+        default:
+          authorizations = authorizationScenarios.pendingApproval.authorizations;
+      }
+      
       // Mock detailed capital call - normally would fetch from database
       const mockDetailedCapitalCall = {
         id: "cc-1",
@@ -1757,13 +1779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { id: "3", responsible: "ER", sequence: 3, concept: "Impuestos y derechos - Recibo de derecho de pago por licencia de demolición", provider: "H. Ayuntamiento de Tijuana", amount: "2942.00", dueDate: new Date("2024-07-31"), includesVAT: true, notes: "Incluye IVA" },
           { id: "4", responsible: "ER", sequence: 4, concept: "Impuestos y derechos - Recibo de derecho de pago por licencia de demolición", provider: "H. Ayuntamiento de Tijuana", amount: "1822.50", dueDate: new Date("2024-07-31"), includesVAT: true, notes: "Incluye IVA" }
         ],
-        authorizations: [
-          { step: 1, stepType: "elabora", userName: "Yoshimitsu Calderón", userTitle: "Project Manager", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "firmado", signedAt: new Date("2024-07-25") },
-          { step: 2, stepType: "autoriza", userName: "Ana Cecilia Campos", userTitle: "Directora de Desarrollo", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "pendiente" },
-          { step: 3, stepType: "autoriza", userName: "Yoshimitsu Calderón", userTitle: "Director de Administración y Finanzas", company: "", status: "pendiente" },
-          { step: 4, stepType: "autoriza", userName: "Juan Núñez", userTitle: "Socio Director", company: "Red Oak Ventures, S.A.P.I. de C.V.", status: "pendiente" },
-          { step: 5, stepType: "autoriza", userName: "Javier Gómez", userTitle: "Investment Manager", company: "CI Capital Partners", status: "pendiente" }
-        ],
+        authorizations,
         budgetExecution: [
           { budgetCategory: "Trámites y permisos", previousAccumulated: "322045", thisCapitalCall: "20500", currentAccumulated: "342545" },
           { budgetCategory: "Impuestos y derechos", previousAccumulated: "326852", thisCapitalCall: "5609", currentAccumulated: "332461" },
