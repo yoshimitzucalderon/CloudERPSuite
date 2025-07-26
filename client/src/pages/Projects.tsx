@@ -67,7 +67,7 @@ export default function Projects() {
     createProjectMutation.mutate(data);
   };
 
-  const filteredProjects = projects?.filter((project: Project) => {
+  const filteredProjects = (projects || []).filter((project: Project) => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || project.status === statusFilter;
     return matchesSearch && matchesStatus;

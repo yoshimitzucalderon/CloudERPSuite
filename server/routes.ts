@@ -160,12 +160,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/budget/categories', isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertBudgetCategorySchema.parse(req.body);
-      const category = await storage.createBudgetCategory(validatedData);
+      const categoryData = insertBudgetCategorySchema.parse(req.body);
+      const category = await storage.createBudgetCategory(categoryData);
       res.status(201).json(category);
     } catch (error) {
       console.error("Error creating budget category:", error);
-      res.status(400).json({ message: "Invalid budget category data" });
+      res.status(400).json({ message: "Failed to create budget category" });
+    }
+  });
+
+  app.get('/api/budget/items/:projectId', isAuthenticated, async (req, res) => {
+    try {
+      const items = await storage.getBudgetItems(req.params.projectId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching budget items:", error);
+      res.status(500).json({ message: "Failed to fetch budget items" });
+    }
+  });
+
+  app.post('/api/budget/items', isAuthenticated, async (req, res) => {
+    try {
+      const itemData = insertBudgetItemSchema.parse(req.body);
+      const item = await storage.createBudgetItem(itemData);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating budget item:", error);
+      res.status(400).json({ message: "Invalid budget item data" });
+    }
+  });
+
+  app.put('/api/budget/items/:id', isAuthenticated, async (req, res) => {
+    try {
+      const itemData = insertBudgetItemSchema.partial().parse(req.body);
+      const item = await storage.updateBudgetItem(req.params.id, itemData);
+      if (!item) {
+        return res.status(404).json({ message: "Budget item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating budget item:", error);
+      res.status(400).json({ message: "Invalid budget item data" });
     }
   });
 

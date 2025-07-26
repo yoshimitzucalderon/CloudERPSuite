@@ -128,7 +128,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProject(id: string): Promise<boolean> {
     const result = await db.delete(projects).where(eq(projects.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Permit operations
@@ -170,12 +170,13 @@ export class DatabaseStorage implements IStorage {
 
   async deletePermit(id: string): Promise<boolean> {
     const result = await db.delete(permits).where(eq(permits.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Budget operations
   async getBudgetCategories(): Promise<BudgetCategory[]> {
-    return await db.select().from(budgetCategories);
+    const result = await db.select().from(budgetCategories);
+    return result as BudgetCategory[];
   }
 
   async createBudgetCategory(category: InsertBudgetCategory): Promise<BudgetCategory> {
@@ -238,7 +239,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDocument(id: string): Promise<boolean> {
     const result = await db.delete(documents).where(eq(documents.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Calendar operations
@@ -271,7 +272,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCalendarEvent(id: string): Promise<boolean> {
     const result = await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Dashboard metrics

@@ -72,7 +72,7 @@ export default function Permits() {
     });
   };
 
-  const filteredPermits = permits?.filter((permit: Permit) => {
+  const filteredPermits = (permits || []).filter((permit: Permit) => {
     const matchesSearch = permit.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || permit.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -102,7 +102,7 @@ export default function Permits() {
   };
 
   const getProjectName = (projectId: string) => {
-    const project = projects?.find((p: Project) => p.id === projectId);
+    const project = (projects || []).find((p: Project) => p.id === projectId);
     return project?.name || "Proyecto no encontrado";
   };
 
