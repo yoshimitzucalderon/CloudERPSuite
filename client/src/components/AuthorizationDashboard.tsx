@@ -50,19 +50,19 @@ export function AuthorizationMetrics() {
     escalatedWorkflows = 0,
     activeApprovers = 0,
     approvalRate = 0,
-  } = metrics || {};
+  } = (metrics as any) || {};
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Main Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Workflows</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Total Workflows</CardTitle>
+            <FileText className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalWorkflows}</div>
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold">{totalWorkflows}</div>
             <p className="text-xs text-muted-foreground">
               Todos los workflows creados
             </p>
@@ -71,11 +71,11 @@ export function AuthorizationMetrics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-xs font-medium">Pendientes</CardTitle>
+            <Clock className="h-3 w-3 text-orange-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{pendingWorkflows}</div>
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold text-orange-600">{pendingWorkflows}</div>
             <p className="text-xs text-muted-foreground">
               Esperando aprobación
             </p>
@@ -84,11 +84,11 @@ export function AuthorizationMetrics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aprobados</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-xs font-medium">Aprobados</CardTitle>
+            <CheckCircle className="h-3 w-3 text-green-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{approvedWorkflows}</div>
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold text-green-600">{approvedWorkflows}</div>
             <p className="text-xs text-muted-foreground">
               Completados exitosamente
             </p>
@@ -97,11 +97,11 @@ export function AuthorizationMetrics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rechazados</CardTitle>
-            <XCircle className="h-4 w-4 text-red-500" />
+            <CardTitle className="text-xs font-medium">Rechazados</CardTitle>
+            <XCircle className="h-3 w-3 text-red-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{rejectedWorkflows}</div>
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold text-red-600">{rejectedWorkflows}</div>
             <p className="text-xs text-muted-foreground">
               No aprobados
             </p>
@@ -113,11 +113,11 @@ export function AuthorizationMetrics() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tiempo Promedio</CardTitle>
-            <Timer className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-xs font-medium">Tiempo Promedio</CardTitle>
+            <Timer className="h-3 w-3 text-blue-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{averageApprovalTime}h</div>
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold">{averageApprovalTime}h</div>
             <p className="text-xs text-muted-foreground">
               Para completar aprobaciones
             </p>
@@ -126,11 +126,11 @@ export function AuthorizationMetrics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Escalados</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+            <CardTitle className="text-xs font-medium">Escalados</CardTitle>
+            <AlertTriangle className="h-3 w-3 text-yellow-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{escalatedWorkflows}</div>
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold text-yellow-600">{escalatedWorkflows}</div>
             <p className="text-xs text-muted-foreground">
               Workflows escalados
             </p>
@@ -139,11 +139,11 @@ export function AuthorizationMetrics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aprobadores Activos</CardTitle>
-            <Users className="h-4 w-4 text-purple-500" />
+            <CardTitle className="text-xs font-medium">Aprobadores Activos</CardTitle>
+            <Users className="h-3 w-3 text-purple-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{activeApprovers}</div>
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold text-purple-600">{activeApprovers}</div>
             <p className="text-xs text-muted-foreground">
               Usuarios con permisos
             </p>
@@ -153,22 +153,22 @@ export function AuthorizationMetrics() {
 
       {/* Approval Rate */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center">
-            <TrendingUp className="h-4 w-4 mr-2" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center">
+            <TrendingUp className="h-3 w-3 mr-2" />
             Tasa de Aprobación
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs">
             Porcentaje de workflows aprobados vs rechazados
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="pb-2">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Aprobación</span>
-              <span className="text-sm text-muted-foreground">{approvalRate}%</span>
+              <span className="text-xs font-medium">Aprobación</span>
+              <span className="text-xs text-muted-foreground">{approvalRate}%</span>
             </div>
-            <Progress value={approvalRate} className="h-2" />
+            <Progress value={approvalRate} className="h-1" />
           </div>
         </CardContent>
       </Card>

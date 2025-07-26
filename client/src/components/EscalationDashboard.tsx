@@ -114,26 +114,27 @@ export function EscalationDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Sistema de Escalamiento</h1>
-          <p className="text-muted-foreground">
-            Monitoreo automático y gestión de escalamientos de workflows
+          <h2 className="text-lg font-semibold">Sistema de Escalamiento</h2>
+          <p className="text-sm text-muted-foreground">
+            Monitoreo automático y gestión de escalamientos
           </p>
         </div>
         <Button 
+          size="sm"
           onClick={handleTriggerEscalation}
           disabled={isProcessing}
           className="flex items-center gap-2"
         >
           {isProcessing ? (
-            <RefreshCw className="h-4 w-4 animate-spin" />
+            <RefreshCw className="h-3 w-3 animate-spin" />
           ) : (
-            <Zap className="h-4 w-4" />
+            <Zap className="h-3 w-3" />
           )}
-          {isProcessing ? 'Procesando...' : 'Procesar Escalamientos'}
+          {isProcessing ? 'Procesando...' : 'Procesar'}
         </Button>
       </div>
 
@@ -141,11 +142,11 @@ export function EscalationDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Escalamientos</CardTitle>
-            <ArrowUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Total Escalamientos</CardTitle>
+            <ArrowUp className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold">
               {statsLoading ? '...' : stats?.total || 0}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -156,11 +157,11 @@ export function EscalationDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Workflows en Riesgo</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Workflows en Riesgo</CardTitle>
+            <Clock className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold">
               {workflowsLoading ? '...' : workflowsAtRisk?.length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -171,11 +172,11 @@ export function EscalationDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recordatorios</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Recordatorios</CardTitle>
+            <CheckCircle className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold">
               {statsLoading ? '...' : stats?.byType?.find(t => t.type === 'reminder')?.count || 0}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -186,11 +187,11 @@ export function EscalationDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Escalamientos Críticos</CardTitle>
-            <XCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-medium">Escalamientos Críticos</CardTitle>
+            <XCircle className="h-3 w-3 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="pb-2">
+            <div className="text-lg font-semibold">
               {statsLoading ? '...' : stats?.byType?.find(t => t.type === 'final_escalation')?.count || 0}
             </div>
             <p className="text-xs text-muted-foreground">

@@ -430,22 +430,22 @@ export default function AuthorizationsAdvanced() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-lg font-semibold tracking-tight">
             Sistema de Autorizaciones Avanzado
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Gestión multinivel de workflows con escalamiento automático y delegación de autoridad
+          <p className="text-sm text-muted-foreground">
+            Gestión multinivel de workflows con escalamiento automático
           </p>
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Workflow Multinivel
+            <Button size="sm">
+              <Plus className="h-3 w-3 mr-2" />
+              Nuevo Workflow
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
@@ -587,10 +587,10 @@ export default function AuthorizationsAdvanced() {
                 />
                 
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={createWorkflowMutation.isPending}>
+                  <Button type="submit" size="sm" disabled={createWorkflowMutation.isPending}>
                     {createWorkflowMutation.isPending ? "Creando..." : "Crear Workflow"}
                   </Button>
                 </div>
@@ -600,7 +600,7 @@ export default function AuthorizationsAdvanced() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-4">
+      <Tabs defaultValue="dashboard" className="space-y-3">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="pending">Pendientes</TabsTrigger>
@@ -611,9 +611,9 @@ export default function AuthorizationsAdvanced() {
         </TabsList>
         
         <TabsContent value="dashboard">
-          <div className="space-y-6">
+          <div className="space-y-4">
             <AuthorizationMetrics />
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <RecentActivity />
             </div>
           </div>
@@ -624,8 +624,8 @@ export default function AuthorizationsAdvanced() {
         </TabsContent>
         
         <TabsContent value="workflows">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Todos los Workflows</h3>
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium">Todos los Workflows</h3>
             {workflowsLoading ? (
               <div className="animate-pulse space-y-4">
                 {[1, 2, 3].map(i => (
