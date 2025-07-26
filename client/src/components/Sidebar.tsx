@@ -37,11 +37,9 @@ export function Sidebar() {
     <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200">
       <div className="flex flex-col h-full">
         {/* Logo Header */}
-        <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <Logo className="h-8 w-auto" />
-            <span className="text-sm font-medium text-gray-700">ERP Inmobiliario</span>
-          </div>
+        <div className="flex flex-col items-center justify-center h-20 px-4 border-b border-gray-200">
+          <Logo className="h-8 w-auto mb-1" />
+          <span className="text-xs font-medium text-gray-600">ERP Inmobiliario</span>
         </div>
 
         {/* Navigation Menu */}
