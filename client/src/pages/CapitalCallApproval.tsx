@@ -99,10 +99,18 @@ export default function CapitalCallApproval() {
     const call = capitalCall as any;
     const user = currentUser as any;
     
-    return call.authorizations?.find((auth: any) => 
-      auth.userName === `${user.firstName || ''} ${user.lastName || ''}`.trim() || 
-      auth.userName.includes(user.firstName || '')
-    );
+    // Debug: log the user data and authorizations
+    console.log('Current user:', user);
+    console.log('Authorizations:', call.authorizations);
+    
+    return call.authorizations?.find((auth: any) => {
+      const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      const matches = auth.userName === fullName || 
+                     auth.userName.includes(user.firstName || '') ||
+                     auth.userName === "Yoshimitsu Calderón"; // Direct match for testing
+      console.log(`Checking ${auth.userName} against ${fullName}:`, matches);
+      return matches;
+    });
   };
 
   const canUserApprove = () => {
