@@ -117,7 +117,7 @@ export default function Projects() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Proyectos</h1>
           <p className="text-gray-600">Gestión de desarrollos inmobiliarios</p>
@@ -125,8 +125,8 @@ export default function Projects() {
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
+            <Button className="bg-blue-600 hover:bg-blue-700 py-3 text-base font-medium">
+              <Plus className="w-5 h-5 mr-2" />
               Nuevo Proyecto
             </Button>
           </DialogTrigger>
@@ -262,11 +262,11 @@ export default function Projects() {
                   )}
                 />
 
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <div className="flex flex-col sm:flex-row justify-end gap-3">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="py-3 text-base font-medium">
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={createProjectMutation.isPending}>
+                  <Button type="submit" disabled={createProjectMutation.isPending} className="py-3 text-base font-medium">
                     {createProjectMutation.isPending ? "Creando..." : "Crear Proyecto"}
                   </Button>
                 </div>
@@ -277,19 +277,19 @@ export default function Projects() {
       </div>
 
       {/* Filters */}
-      <div className="flex space-x-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Buscar proyectos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 py-3"
           />
         </div>
         
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48 py-3">
             <SelectValue placeholder="Filtrar por estado" />
           </SelectTrigger>
           <SelectContent>

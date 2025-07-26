@@ -244,21 +244,23 @@ export default function Investors() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Capital Calls e Inversionistas
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">
-            Gestión completa de inversores, capital calls y distribuciones
-          </p>
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
+              Capital Calls e Inversionistas
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
+              Gestión completa de inversores, capital calls y distribuciones
+            </p>
+          </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Dialog open={showNewInvestorDialog} onOpenChange={setShowNewInvestorDialog}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button className="py-3 text-base font-medium">
+                <Plus className="h-5 w-5 mr-2" />
                 Nuevo Inversor
               </Button>
             </DialogTrigger>
@@ -358,16 +360,18 @@ export default function Investors() {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2 mt-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
                 <Button 
                   variant="outline" 
                   onClick={() => setShowNewInvestorDialog(false)}
+                  className="py-3 text-base font-medium"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={handleCreateInvestor}
                   disabled={createInvestorMutation.isPending}
+                  className="py-3 text-base font-medium"
                 >
                   {createInvestorMutation.isPending ? "Creando..." : "Crear Inversor"}
                 </Button>
@@ -377,8 +381,8 @@ export default function Investors() {
           
           <Dialog open={showCapitalCallDialog} onOpenChange={setShowCapitalCallDialog}>
             <DialogTrigger asChild>
-              <Button variant="outline">
-                <Calendar className="h-4 w-4 mr-2" />
+              <Button variant="outline" className="py-3 text-base font-medium">
+                <Calendar className="h-5 w-5 mr-2" />
                 Nuevo Capital Call
               </Button>
             </DialogTrigger>
@@ -449,16 +453,18 @@ export default function Investors() {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2 mt-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
                 <Button 
                   variant="outline" 
                   onClick={() => setShowCapitalCallDialog(false)}
+                  className="py-3 text-base font-medium"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={handleCreateCapitalCall}
                   disabled={createCapitalCallMutation.isPending}
+                  className="py-3 text-base font-medium"
                 >
                   {createCapitalCallMutation.isPending ? "Creando..." : "Crear Capital Call"}
                 </Button>
@@ -525,11 +531,11 @@ export default function Investors() {
 
       {/* Main Content */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="investors">Inversionistas</TabsTrigger>
-          <TabsTrigger value="capital-calls">Capital Calls</TabsTrigger>
-          <TabsTrigger value="reports">Reportes ROI</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">Resumen</TabsTrigger>
+          <TabsTrigger value="investors" className="text-xs sm:text-sm">Inversionistas</TabsTrigger>
+          <TabsTrigger value="capital-calls" className="text-xs sm:text-sm">Capital Calls</TabsTrigger>
+          <TabsTrigger value="reports" className="text-xs sm:text-sm">Reportes ROI</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
