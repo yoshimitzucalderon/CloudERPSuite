@@ -10,6 +10,12 @@ import {
   lots,
   clients,
   salesContracts,
+  authorizationWorkflows,
+  authorizationSteps,
+  authorizationMatrix,
+  workflowSteps,
+  authorityDelegations,
+  workflowNotifications,
   type User,
   type UpsertUser,
   type Project,
@@ -32,9 +38,21 @@ import {
   type InsertClient,
   type SalesContract,
   type InsertSalesContract,
+  type AuthorizationWorkflow,
+  type InsertAuthorizationWorkflow,
+  type AuthorizationStep,
+  type InsertAuthorizationStep,
+  type AuthorizationMatrix,
+  type InsertAuthorizationMatrix,
+  type WorkflowStep,
+  type InsertWorkflowStep,
+  type AuthorityDelegation,
+  type InsertAuthorityDelegation,
+  type WorkflowNotification,
+  type InsertWorkflowNotification,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, count, sum, sql } from "drizzle-orm";
+import { eq, desc, and, count, sum, sql, or, isNull, lte, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -500,49 +518,9 @@ export class DatabaseStorage implements IStorage {
     return newStep;
   }
 
-  // Investors and Capital Calls
-  async getInvestors(): Promise<Investor[]> {
-    return await db
-      .select()
-      .from(investors)
-      .orderBy(investors.name);
-  }
-
-  async createInvestor(investor: InsertInvestor): Promise<Investor> {
-    const [newInvestor] = await db
-      .insert(investors)
-      .values({
-        ...investor,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
-    return newInvestor;
-  }
-
-  async getCapitalCalls(projectId: string): Promise<CapitalCall[]> {
-    return await db
-      .select()
-      .from(capitalCalls)
-      .where(eq(capitalCalls.projectId, projectId))
-      .orderBy(capitalCalls.callNumber);
-  }
-
-  async createCapitalCall(capitalCall: InsertCapitalCall): Promise<CapitalCall> {
-    const [newCapitalCall] = await db
-      .insert(capitalCalls)
-      .values({
-        ...capitalCall,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
-    return newCapitalCall;
-  }
+  // Authorization Matrix Management
 
   // Advanced Multi-level Authorization System
-  
-  // Authorization Matrix Management
   async getAuthorizationMatrix(): Promise<AuthorizationMatrix[]> {
     return await db
       .select()
@@ -803,6 +781,54 @@ export class DatabaseStorage implements IStorage {
       .where(eq(authorizationWorkflows.id, id))
       .returning();
     return updatedWorkflow;
+  }
+
+  async getAuthorizationMetrics(): Promise<any> {
+    const totalWorkflows = await db.select({ count: count() }).from(authorizationWorkflows);
+    const pendingWorkflows = await db.select({ count: count() }).from(authorizationWorkflows).where(eq(authorizationWorkflows.status, 'pendiente'));
+    const approvedWorkflows = await db.select({ count: count() }).from(authorizationWorkflows).where(eq(authorizationWorkflows.status, 'aprobado'));
+    const rejectedWorkflows = await db.select({ count: count() }).from(authorizationWorkflows).where(eq(authorizationWorkflows.status, 'rechazado'));
+
+    return {
+      totalWorkflows: totalWorkflows[0]?.count || 0,
+      pendingWorkflows: pendingWorkflows[0]?.count || 0,
+      approvedWorkflows: approvedWorkflows[0]?.count || 0,
+      rejectedWorkflows: rejectedWorkflows[0]?.count || 0,
+      averageApprovalTime: 24, // Mock data
+      escalatedWorkflows: 0,
+      activeApprovers: 3,
+      approvalRate: 85,
+    };
+  }
+
+  async getRecentAuthorizationWorkflows(): Promise<AuthorizationWorkflow[]> {
+    return await db
+      .select()
+      .from(authorizationWorkflows)
+      .orderBy(desc(authorizationWorkflows.updatedAt))
+      .limit(10);
+  }
+
+  async getAuthorityDelegations(): Promise<AuthorityDelegation[]> {
+    return await db
+      .select()
+      .from(authorityDelegations)
+      .orderBy(desc(authorityDelegations.createdAt));
+  }
+
+  async createAuthorityDelegation(delegation: InsertAuthorityDelegation): Promise<AuthorityDelegation> {
+    const [newDelegation] = await db
+      .insert(authorityDelegations)
+      .values(delegation)
+      .returning();
+    return newDelegation;
+  }
+
+  async revokeAuthorityDelegation(id: string): Promise<void> {
+    await db
+      .update(authorityDelegations)
+      .set({ isActive: false })
+      .where(eq(authorityDelegations.id, id));
   }
 }
 

@@ -779,6 +779,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Authorization metrics
+  app.get('/api/authorization-metrics', isAuthenticated, async (req: any, res) => {
+    try {
+      const metrics = await storage.getAuthorizationMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching authorization metrics:", error);
+      res.status(500).json({ message: "Failed to fetch authorization metrics" });
+    }
+  });
+
+  // Recent workflows
+  app.get('/api/authorization-workflows/recent', isAuthenticated, async (req: any, res) => {
+    try {
+      const workflows = await storage.getRecentAuthorizationWorkflows();
+      res.json(workflows);
+    } catch (error) {
+      console.error("Error fetching recent workflows:", error);
+      res.status(500).json({ message: "Failed to fetch recent workflows" });
+    }
+  });
+
+  // Authority delegations
+  app.get('/api/authority-delegations', isAuthenticated, async (req: any, res) => {
+    try {
+      const delegations = await storage.getAuthorityDelegations();
+      res.json(delegations);
+    } catch (error) {
+      console.error("Error fetching authority delegations:", error);
+      res.status(500).json({ message: "Failed to fetch authority delegations" });
+    }
+  });
+
+  app.post('/api/authority-delegations', isAuthenticated, async (req: any, res) => {
+    try {
+      const delegation = await storage.createAuthorityDelegation({
+        ...req.body,
+        delegatorId: req.user.claims.sub,
+        isActive: true,
+      });
+      res.json(delegation);
+    } catch (error) {
+      console.error("Error creating authority delegation:", error);
+      res.status(500).json({ message: "Failed to create authority delegation" });
+    }
+  });
+
+  app.delete('/api/authority-delegations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.revokeAuthorityDelegation(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error revoking authority delegation:", error);
+      res.status(500).json({ message: "Failed to revoke authority delegation" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

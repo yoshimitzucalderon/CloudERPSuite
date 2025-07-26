@@ -53,7 +53,11 @@ import {
   ArrowDown,
   Calendar,
   Bell,
+  BarChart3,
+  UserCheck,
 } from "lucide-react";
+import { AuthorizationMetrics, RecentActivity } from "@/components/AuthorizationDashboard";
+import { DelegationManager } from "@/components/DelegationManager";
 
 // Schema for multi-level workflow creation
 const multiLevelWorkflowSchema = z.object({
@@ -595,13 +599,24 @@ export default function AuthorizationsAdvanced() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="pending">Pendientes de Aprobación</TabsTrigger>
-          <TabsTrigger value="workflows">Todos los Workflows</TabsTrigger>
-          <TabsTrigger value="matrix">Matriz de Autorización</TabsTrigger>
+      <Tabs defaultValue="dashboard" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="pending">Pendientes</TabsTrigger>
+          <TabsTrigger value="workflows">Workflows</TabsTrigger>
+          <TabsTrigger value="matrix">Matriz</TabsTrigger>
+          <TabsTrigger value="delegations">Delegaciones</TabsTrigger>
           <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="dashboard">
+          <div className="space-y-6">
+            <AuthorizationMetrics />
+            <div className="grid gap-6 md:grid-cols-2">
+              <RecentActivity />
+            </div>
+          </div>
+        </TabsContent>
         
         <TabsContent value="pending">
           <PendingApprovals />
@@ -665,6 +680,10 @@ export default function AuthorizationsAdvanced() {
         
         <TabsContent value="matrix">
           <AuthorizationMatrix />
+        </TabsContent>
+        
+        <TabsContent value="delegations">
+          <DelegationManager />
         </TabsContent>
         
         <TabsContent value="notifications">
