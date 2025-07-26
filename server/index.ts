@@ -38,6 +38,7 @@ app.use((req, res, next) => {
 
 import { seedBudgetCategories } from "./seedData";
 import { createDemoProject } from "./demoData";
+import { startEscalationService } from "./escalationService";
 
 (async () => {
   // Seed initial data
@@ -74,5 +75,8 @@ import { createDemoProject } from "./demoData";
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the escalation service after server is running
+    startEscalationService();
   });
 })();

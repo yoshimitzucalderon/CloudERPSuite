@@ -58,6 +58,7 @@ import {
 } from "lucide-react";
 import { AuthorizationMetrics, RecentActivity } from "@/components/AuthorizationDashboard";
 import { DelegationManager } from "@/components/DelegationManager";
+import { EscalationDashboard } from "@/components/EscalationDashboard";
 
 // Schema for multi-level workflow creation
 const multiLevelWorkflowSchema = z.object({
@@ -606,7 +607,7 @@ export default function AuthorizationsAdvanced() {
           <TabsTrigger value="workflows">Workflows</TabsTrigger>
           <TabsTrigger value="matrix">Matriz</TabsTrigger>
           <TabsTrigger value="delegations">Delegaciones</TabsTrigger>
-          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+          <TabsTrigger value="escalation">Escalamiento</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard">
@@ -686,8 +687,8 @@ export default function AuthorizationsAdvanced() {
           <DelegationManager />
         </TabsContent>
         
-        <TabsContent value="notifications">
-          <WorkflowNotifications />
+        <TabsContent value="escalation">
+          <EscalationDashboard />
         </TabsContent>
       </Tabs>
     </div>

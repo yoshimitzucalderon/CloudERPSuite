@@ -4,6 +4,7 @@ import multer from "multer";
 import path from "path";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { escalationService } from "./escalationService";
 import {
   insertProjectSchema,
   insertPermitSchema,
@@ -833,6 +834,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error revoking authority delegation:", error);
       res.status(500).json({ message: "Failed to revoke authority delegation" });
+    }
+  });
+
+  // Escalation API Routes
+  app.get('/api/escalations/stats', isAuthenticated, async (req, res) => {
+    try {
+      const stats = await escalationService.getEscalationStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching escalation stats:", error);
+      res.status(500).json({ message: "Failed to fetch escalation stats" });
+    }
+  });
+
+  app.get('/api/escalations/at-risk', isAuthenticated, async (req, res) => {
+    try {
+      const workflows = await escalationService.getWorkflowsAtRisk();
+      res.json(workflows);
+    } catch (error) {
+      console.error("Error fetching workflows at risk:", error);
+      res.status(500).json({ message: "Failed to fetch workflows at risk" });
+    }
+  });
+
+  app.post('/api/escalations/trigger', isAuthenticated, async (req, res) => {
+    try {
+      await escalationService.processEscalations();
+      res.json({ message: "Escalations processed successfully" });
+    } catch (error) {
+      console.error("Error triggering escalations:", error);
+      res.status(500).json({ message: "Failed to trigger escalations" });
     }
   });
 

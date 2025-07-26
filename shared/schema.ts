@@ -371,6 +371,20 @@ export const capitalCalls = pgTable("capital_calls", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Escalation Records - Registro de escalamientos
+export const escalationRecords = pgTable("escalation_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => authorizationWorkflows.id),
+  escalationType: varchar("escalation_type").notNull(), // 'reminder', 'escalation', 'final_escalation'
+  triggerHours: integer("trigger_hours").notNull(), // Horas transcurridas que dispararon el escalamiento
+  targetUserId: varchar("target_user_id").notNull().references(() => users.id),
+  previousApprover: varchar("previous_approver").references(() => users.id),
+  message: text("message").notNull(),
+  isProcessed: boolean("is_processed").default(false),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const projectsRelations = relations(projects, ({ many }) => ({
   permits: many(permits),
@@ -664,6 +678,11 @@ export const insertWorkflowNotificationSchema = createInsertSchema(workflowNotif
   createdAt: true,
 });
 
+export const insertEscalationRecordSchema = createInsertSchema(escalationRecords).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -703,3 +722,5 @@ export type InsertAuthorityDelegation = z.infer<typeof insertAuthorityDelegation
 export type AuthorityDelegation = typeof authorityDelegations.$inferSelect;
 export type InsertWorkflowNotification = z.infer<typeof insertWorkflowNotificationSchema>;
 export type WorkflowNotification = typeof workflowNotifications.$inferSelect;
+export type InsertEscalationRecord = z.infer<typeof insertEscalationRecordSchema>;
+export type EscalationRecord = typeof escalationRecords.$inferSelect;

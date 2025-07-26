@@ -16,6 +16,7 @@ import {
   workflowSteps,
   authorityDelegations,
   workflowNotifications,
+  escalationRecords,
   type User,
   type UpsertUser,
   type Project,
@@ -50,6 +51,8 @@ import {
   type InsertAuthorityDelegation,
   type WorkflowNotification,
   type InsertWorkflowNotification,
+  type EscalationRecord,
+  type InsertEscalationRecord,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, or, isNull, lte, gte } from "drizzle-orm";
@@ -529,6 +532,102 @@ export class DatabaseStorage implements IStorage {
       .orderBy(authorizationMatrix.workflowType, authorizationMatrix.minAmount);
   }
 
+  // Escalation System Functions
+  async getPendingWorkflowsForEscalation(): Promise<any[]> {
+    return await db
+      .select()
+      .from(authorizationWorkflows)
+      .where(
+        and(
+          eq(authorizationWorkflows.status, 'pendiente'),
+          isNull(authorizationWorkflows.approvedAt),
+          isNull(authorizationWorkflows.rejectedAt)
+        )
+      )
+      .orderBy(authorizationWorkflows.createdAt);
+  }
+
+  async createEscalationRecord(record: InsertEscalationRecord): Promise<EscalationRecord> {
+    const [newRecord] = await db
+      .insert(escalationRecords)
+      .values({
+        ...record,
+        createdAt: new Date(),
+      })
+      .returning();
+    return newRecord;
+  }
+
+  async getNotificationByWorkflowAndType(workflowId: string, type: string, hours: number): Promise<WorkflowNotification | undefined> {
+    const [notification] = await db
+      .select()
+      .from(workflowNotifications)
+      .where(
+        and(
+          eq(workflowNotifications.workflowId, workflowId),
+          eq(workflowNotifications.notificationType, type),
+          sql`CAST(${workflowNotifications.metadata}->>'hours' AS INTEGER) = ${hours}`
+        )
+      );
+    return notification;
+  }
+
+  async getEscalationByWorkflowAndType(workflowId: string, type: string): Promise<EscalationRecord | undefined> {
+    const [escalation] = await db
+      .select()
+      .from(escalationRecords)
+      .where(
+        and(
+          eq(escalationRecords.workflowId, workflowId),
+          eq(escalationRecords.escalationType, type)
+        )
+      );
+    return escalation;
+  }
+
+  async getUsersByRole(roles: string[]): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(sql`${users.role} = ANY(${roles})`);
+  }
+
+  async getEscalationStatistics(): Promise<any> {
+    const totalEscalations = await db
+      .select({ count: count() })
+      .from(escalationRecords);
+    
+    const escalationsByType = await db
+      .select({
+        type: escalationRecords.escalationType,
+        count: count()
+      })
+      .from(escalationRecords)
+      .groupBy(escalationRecords.escalationType);
+
+    return {
+      total: totalEscalations[0]?.count || 0,
+      byType: escalationsByType,
+    };
+  }
+
+  async getWorkflowsNearEscalation(): Promise<any[]> {
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    
+    return await db
+      .select()
+      .from(authorizationWorkflows)
+      .where(
+        and(
+          eq(authorizationWorkflows.status, 'pendiente'),
+          lte(authorizationWorkflows.createdAt, sixHoursAgo),
+          isNull(authorizationWorkflows.approvedAt),
+          isNull(authorizationWorkflows.rejectedAt)
+        )
+      )
+      .orderBy(authorizationWorkflows.createdAt);
+  }
+
   async createAuthorizationMatrix(matrix: InsertAuthorizationMatrix): Promise<AuthorizationMatrix> {
     const [newMatrix] = await db
       .insert(authorizationMatrix)
@@ -670,6 +769,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(workflowNotifications.id, id))
       .returning();
     return readNotification;
+  }
+
+  async getEscalationRecords(): Promise<EscalationRecord[]> {
+    return await db
+      .select()
+      .from(escalationRecords)
+      .orderBy(desc(escalationRecords.createdAt));
   }
 
   // Advanced Authorization Logic
