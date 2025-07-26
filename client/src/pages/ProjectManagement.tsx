@@ -28,7 +28,9 @@ import {
   PlayCircle,
   Calculator,
   Layers,
-  Share2
+  Share2,
+  Upload,
+  FileText
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -63,6 +65,9 @@ export default function ProjectManagement() {
   const [showNewTaskDialog, setShowNewTaskDialog] = useState(false);
   const [showResourceDialog, setShowResourceDialog] = useState(false);
   const [showMilestoneDialog, setShowMilestoneDialog] = useState(false);
+  const [showMSProjectImport, setShowMSProjectImport] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -174,6 +179,81 @@ export default function ProjectManagement() {
     },
   });
 
+  // MS Project import mutation
+  const importMSProjectMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('msProjectFile', file);
+      
+      return apiRequest('POST', `/api/projects/${selectedProject}/import/msproject`, formData);
+    },
+    onSuccess: (response) => {
+      toast({
+        title: "Éxito",
+        description: "Importación de Microsoft Project iniciada exitosamente",
+      });
+      setShowMSProjectImport(false);
+      setImportFile(null);
+      setIsImporting(false);
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', selectedProject, 'tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', selectedProject, 'resources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', selectedProject, 'milestones'] });
+    },
+    onError: (error) => {
+      setIsImporting(false);
+      toast({
+        title: "Error",
+        description: error.message || "Error al importar archivo de Microsoft Project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Validate MS Project file mutation
+  const validateMSProjectMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('msProjectFile', file);
+      
+      return apiRequest('POST', `/api/projects/${selectedProject}/import/validate`, formData);
+    },
+    onSuccess: (validation) => {
+      if (validation.isValid) {
+        toast({
+          title: "Archivo válido",
+          description: `Archivo Microsoft Project válido. Versión: ${validation.version}, Tareas: ${validation.taskCount}, Recursos: ${validation.resourceCount}`,
+        });
+      } else {
+        toast({
+          title: "Archivo inválido",
+          description: validation.error || "El archivo no es un archivo Microsoft Project válido",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Error al validar archivo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleValidateFile = () => {
+    if (importFile) {
+      validateMSProjectMutation.mutate(importFile);
+    }
+  };
+
+  const handleImportFile = () => {
+    if (importFile) {
+      setIsImporting(true);
+      importMSProjectMutation.mutate(importFile);
+    }
+  };
+
   const handleCreateTask = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -261,6 +341,78 @@ export default function ProjectManagement() {
               <Download className="w-4 h-4 mr-2" />
               Exportar MS Project
             </Button>
+            <Dialog open={showMSProjectImport} onOpenChange={setShowMSProjectImport}>
+              <DialogTrigger asChild>
+                <Button variant="outline" disabled={!selectedProject}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Importar MS Project
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Importar Microsoft Project</DialogTitle>
+                  <DialogDescription>
+                    Importar tareas, recursos y cronograma desde un archivo .mpp o .xml
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="msProjectFile">Archivo Microsoft Project</Label>
+                    <Input 
+                      id="msProjectFile" 
+                      type="file" 
+                      accept=".mpp,.xml"
+                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Formatos soportados: .mpp, .xml (máximo 50MB)
+                    </p>
+                  </div>
+                  
+                  {importFile && (
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        <span className="text-sm font-medium">{importFile.name}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Tamaño: {(importFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={handleValidateFile}
+                      disabled={!importFile || isImporting}
+                      className="flex-1"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Validar
+                    </Button>
+                    <Button 
+                      onClick={handleImportFile}
+                      disabled={!importFile || isImporting}
+                      className="flex-1"
+                    >
+                      {isImporting ? (
+                        <>
+                          <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Importando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Importar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Dialog open={showNewTaskDialog} onOpenChange={setShowNewTaskDialog}>
               <DialogTrigger asChild>
                 <Button disabled={!selectedProject}>

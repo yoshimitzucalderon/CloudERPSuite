@@ -50,6 +50,26 @@ export const projectTypeEnum = pgEnum('project_type', [
   'residencial', 'industrial', 'comercial', 'usos_mixtos'
 ]);
 
+// Task priority enum
+export const taskPriorityEnum = pgEnum('task_priority', [
+  'baja', 'media', 'alta', 'critica'
+]);
+
+// Task status enum
+export const taskStatusEnum = pgEnum('task_status', [
+  'no_iniciada', 'en_progreso', 'completada', 'pausada', 'cancelada'
+]);
+
+// Resource type enum
+export const resourceTypeEnum = pgEnum('resource_type', [
+  'humano', 'equipo', 'material', 'costo'
+]);
+
+// Milestone status enum
+export const milestoneStatusEnum = pgEnum('milestone_status', [
+  'pendiente', 'en_progreso', 'alcanzado', 'retrasado'
+]);
+
 // Projects table
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -68,6 +88,8 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+
 
 // Permit status and type enums
 export const permitStatusEnum = pgEnum('permit_status', [
@@ -1115,6 +1137,26 @@ export const earnedValueMetrics = pgTable("earned_value_metrics", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Microsoft Project Import History table
+export const msProjectImports = pgTable("ms_project_imports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  fileName: varchar("file_name").notNull(),
+  filePath: varchar("file_path").notNull(),
+  fileSize: integer("file_size"),
+  importedBy: varchar("imported_by").references(() => users.id),
+  importStatus: varchar("import_status").notNull().default('procesando'), // procesando, completado, error
+  tasksImported: integer("tasks_imported").default(0),
+  resourcesImported: integer("resources_imported").default(0),
+  milestonesImported: integer("milestones_imported").default(0),
+  errorLog: text("error_log"),
+  msProjectVersion: varchar("ms_project_version"),
+  msProjectFileType: varchar("ms_project_file_type"), // .mpp, .xml, .json
+  importSettings: jsonb("import_settings"), // Settings used during import
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Type exports for Project Management
 export type ProjectTask = typeof projectTasks.$inferSelect;
 export type InsertProjectTask = typeof projectTasks.$inferInsert;
@@ -1132,3 +1174,5 @@ export type ProjectMilestone = typeof projectMilestones.$inferSelect;
 export type InsertProjectMilestone = typeof projectMilestones.$inferInsert;
 export type EarnedValueMetric = typeof earnedValueMetrics.$inferSelect;
 export type InsertEarnedValueMetric = typeof earnedValueMetrics.$inferInsert;
+export type MsProjectImport = typeof msProjectImports.$inferSelect;
+export type InsertMsProjectImport = typeof msProjectImports.$inferInsert;

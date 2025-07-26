@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { escalationService } from "./escalationService";
@@ -1554,5 +1555,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  // Microsoft Project Import endpoints
+  app.post('/api/projects/:projectId/import/msproject', upload.single('msProjectFile'), isAuthenticated, async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: 'No se proporcionó archivo' });
+      }
+
+      const filePath = req.file.path;
+      const fileName = req.file.originalname;
+      const userId = req.user.claims.sub;
+
+      // Validate file type
+      const allowedExtensions = ['.mpp', '.xml'];
+      const fileExtension = path.extname(fileName).toLowerCase();
+      
+      if (!allowedExtensions.includes(fileExtension)) {
+        fs.unlinkSync(filePath); // Clean up uploaded file
+        return res.status(400).json({ 
+          message: 'Tipo de archivo no soportado. Solo se permiten archivos .mpp y .xml' 
+        });
+      }
+
+      // Import the file
+      const { msProjectImportService } = await import('./msProjectImportService');
+      const importId = await msProjectImportService.importMSProjectFile(
+        filePath, 
+        projectId, 
+        userId, 
+        fileName
+      );
+
+      res.json({ 
+        message: 'Importación iniciada exitosamente',
+        importId 
+      });
+
+    } catch (error) {
+      console.error('Error importing MS Project file:', error);
+      res.status(500).json({ 
+        message: 'Error al importar archivo de Microsoft Project',
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  });
+
+  // Get import history for a project
+  app.get('/api/projects/:projectId/import/history', isAuthenticated, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const { msProjectImportService } = await import('./msProjectImportService');
+      
+      const importHistory = await msProjectImportService.getImportHistory(projectId);
+      res.json(importHistory);
+    } catch (error) {
+      console.error('Error fetching import history:', error);
+      res.status(500).json({ message: 'Error al obtener el historial de importaciones' });
+    }
+  });
+
+  // Get import details
+  app.get('/api/import/:importId', isAuthenticated, async (req, res) => {
+    try {
+      const { importId } = req.params;
+      const { msProjectImportService } = await import('./msProjectImportService');
+      
+      const importDetails = await msProjectImportService.getImportDetails(importId);
+      if (!importDetails) {
+        return res.status(404).json({ message: 'Importación no encontrada' });
+      }
+      
+      res.json(importDetails);
+    } catch (error) {
+      console.error('Error fetching import details:', error);
+      res.status(500).json({ message: 'Error al obtener los detalles de la importación' });
+    }
+  });
+
+  // Validate MS Project file before import
+  app.post('/api/projects/:projectId/import/validate', upload.single('msProjectFile'), isAuthenticated, async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No se proporcionó archivo' });
+      }
+
+      const filePath = req.file.path;
+      const fileName = req.file.originalname;
+
+      // Validate file type
+      const allowedExtensions = ['.mpp', '.xml'];
+      const fileExtension = path.extname(fileName).toLowerCase();
+      
+      if (!allowedExtensions.includes(fileExtension)) {
+        fs.unlinkSync(filePath); // Clean up uploaded file
+        return res.status(400).json({ 
+          message: 'Tipo de archivo no soportado. Solo se permiten archivos .mpp y .xml' 
+        });
+      }
+
+      const { msProjectImportService } = await import('./msProjectImportService');
+      const validation = await msProjectImportService.validateMSProjectFile(filePath);
+      
+      // Clean up uploaded file after validation
+      fs.unlinkSync(filePath);
+      
+      res.json(validation);
+    } catch (error) {
+      console.error('Error validating MS Project file:', error);
+      res.status(500).json({ 
+        message: 'Error al validar archivo de Microsoft Project',
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  });
+
   return httpServer;
 }
