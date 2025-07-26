@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText, User, Building2, Calendar, MessageSquare } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText, User, Building2, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -94,9 +94,12 @@ export default function CapitalCallApproval() {
   const getCurrentUserStep = () => {
     if (!capitalCall || !currentUser) return null;
     
-    return capitalCall.authorizations?.find((auth: any) => 
-      auth.userName === `${currentUser.firstName} ${currentUser.lastName}` || 
-      auth.userName.includes(currentUser.firstName)
+    const call = capitalCall as any;
+    const user = currentUser as any;
+    
+    return call.authorizations?.find((auth: any) => 
+      auth.userName === `${user.firstName || ''} ${user.lastName || ''}`.trim() || 
+      auth.userName.includes(user.firstName || '')
     );
   };
 
@@ -307,101 +310,173 @@ export default function CapitalCallApproval() {
 
       {/* Action Buttons */}
       {canUserApprove() && (
-        <Card>
+        <Card className="border-yellow-200 bg-yellow-50">
           <CardHeader>
-            <CardTitle>Acciones de Autorización</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-yellow-600" />
+              Su Aprobación es Requerida
+            </CardTitle>
             <CardDescription>
-              Tome una decisión sobre este capital call
+              Este capital call requiere su autorización para continuar con el proceso. Revise los detalles y tome una decisión.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex space-x-4">
-              <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
-                <DialogTrigger asChild>
-                  <Button className="bg-green-600 hover:bg-green-700">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Aprobar Capital Call
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Confirmar Aprobación</DialogTitle>
-                    <DialogDescription>
-                      ¿Está seguro que desea aprobar este capital call por {formatCurrency(call.totalAmount)}?
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Comentarios (opcional)</label>
-                      <Textarea
-                        value={comments}
-                        onChange={(e) => setComments(e.target.value)}
-                        placeholder="Agregue comentarios sobre su aprobación..."
-                        className="mt-1"
-                      />
+            <div className="space-y-4">
+              <div className="bg-white p-4 rounded-lg border">
+                <h4 className="font-medium mb-2">Resumen de la decisión:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <strong>Aprobar:</strong> El capital call continuará al siguiente nivel de autorización</li>
+                  <li>• <strong>Rechazar:</strong> El proceso se detendrá y requerirá revisión</li>
+                </ul>
+              </div>
+              <div className="flex space-x-4">
+                <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Aprobar Capital Call
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Confirmar Aprobación</DialogTitle>
+                      <DialogDescription>
+                        ¿Está seguro que desea aprobar este capital call por {formatCurrency(call.totalAmount)}?
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="approval-comments" className="text-sm font-medium">
+                          Comentarios (opcional)
+                        </Label>
+                        <Textarea
+                          id="approval-comments"
+                          value={comments}
+                          onChange={(e) => setComments(e.target.value)}
+                          placeholder="Agregue comentarios sobre su aprobación..."
+                          className="mt-1"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>
-                      Cancelar
-                    </Button>
-                    <Button 
-                      onClick={handleApprove} 
-                      disabled={approvalMutation.isPending}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {approvalMutation.isPending ? "Procesando..." : "Confirmar Aprobación"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>
+                        Cancelar
+                      </Button>
+                      <Button 
+                        onClick={handleApprove} 
+                        disabled={approvalMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {approvalMutation.isPending ? "Procesando..." : "Confirmar Aprobación"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
 
-              <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="destructive">
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    Rechazar Capital Call
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Confirmar Rechazo</DialogTitle>
-                    <DialogDescription>
-                      ¿Está seguro que desea rechazar este capital call? Esta acción detendrá el proceso de aprobación.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Motivo del rechazo *</label>
-                      <Textarea
-                        value={comments}
-                        onChange={(e) => setComments(e.target.value)}
-                        placeholder="Explique el motivo del rechazo..."
-                        className="mt-1"
-                        required
-                      />
+                <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive">
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Rechazar Capital Call
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Confirmar Rechazo</DialogTitle>
+                      <DialogDescription>
+                        ¿Está seguro que desea rechazar este capital call? Esta acción detendrá el proceso de aprobación.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="rejection-comments" className="text-sm font-medium">
+                          Motivo del rechazo *
+                        </Label>
+                        <Textarea
+                          id="rejection-comments"
+                          value={comments}
+                          onChange={(e) => setComments(e.target.value)}
+                          placeholder="Explique el motivo del rechazo..."
+                          className="mt-1"
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowRejectionDialog(false)}>
-                      Cancelar
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      onClick={handleReject} 
-                      disabled={approvalMutation.isPending || !comments.trim()}
-                    >
-                      {approvalMutation.isPending ? "Procesando..." : "Confirmar Rechazo"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setShowRejectionDialog(false)}>
+                        Cancelar
+                      </Button>
+                      <Button 
+                        variant="destructive"
+                        onClick={handleReject} 
+                        disabled={approvalMutation.isPending || !comments.trim()}
+                      >
+                        {approvalMutation.isPending ? "Procesando..." : "Confirmar Rechazo"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
 
-              <Button variant="outline" onClick={() => setLocation(`/investors/capital-call/${id}`)}>
-                <FileText className="h-4 w-4 mr-2" />
-                Ver Detalle Completo
-              </Button>
+                <Button variant="outline" onClick={() => setLocation(`/investors/capital-call/${id}`)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Ver Detalle Completo
+                </Button>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Information for users who already acted */}
+      {userStep && userStep.status !== 'pendiente' && (
+        <Card className={userStep.status === 'firmado' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {userStep.status === 'firmado' ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              )}
+              {userStep.status === 'firmado' ? 'Capital Call Aprobado' : 'Capital Call Rechazado'}
+            </CardTitle>
+            <CardDescription>
+              {userStep.status === 'firmado' 
+                ? 'Usted ya ha aprobado este capital call.' 
+                : 'Usted ha rechazado este capital call.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm">
+              <strong>Fecha de decisión:</strong> {userStep.signedAt ? new Date(userStep.signedAt).toLocaleDateString('es-MX') : 'N/A'}
+              {userStep.comments && (
+                <div className="mt-2">
+                  <strong>Comentarios:</strong>
+                  <div className="mt-1 p-2 bg-white rounded border text-sm">
+                    {userStep.comments}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Information for users not in the workflow */}
+      {!userStep && (
+        <Card className="border-gray-200 bg-gray-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-gray-600" />
+              Solo Lectura
+            </CardTitle>
+            <CardDescription>
+              Usted no está incluido en el flujo de autorización de este capital call.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Puede revisar los detalles pero no tiene permisos para aprobar o rechazar este documento.
+            </p>
           </CardContent>
         </Card>
       )}
