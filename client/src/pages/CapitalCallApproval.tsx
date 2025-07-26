@@ -23,12 +23,25 @@ export default function CapitalCallApproval() {
   const queryClient = useQueryClient();
 
   const { data: capitalCall, isLoading } = useQuery({
-    queryKey: ['/api/capital-calls', id],
-    queryFn: () => {
+    queryKey: ['/api/capital-calls', id, window.location.search],
+    queryFn: async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const scenario = urlParams.get('scenario');
       const queryString = scenario ? `?scenario=${scenario}` : '';
-      return fetch(`/api/capital-calls/${id}${queryString}`).then(res => res.json());
+      
+      const response = await fetch(`/api/capital-calls/${id}${queryString}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
     },
     retry: false,
   });
@@ -39,8 +52,8 @@ export default function CapitalCallApproval() {
   });
 
   const approvalMutation = useMutation({
-    mutationFn: async (data: { action: 'approve' | 'reject', comments?: string }) => {
-      return await apiRequest(`/api/capital-calls/${id}/approve`, 'POST', data);
+    mutationFn: async (data: { action: 'approve' | 'reject' | 'reverse', comments?: string }) => {
+      return await apiRequest('POST', `/api/capital-calls/${id}/approve`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/capital-calls', id] });
