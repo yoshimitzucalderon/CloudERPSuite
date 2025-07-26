@@ -5,6 +5,8 @@ import path from "path";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { escalationService } from "./escalationService";
+import { documentService } from "./documentService";
+import { projectManagementService } from "./projectManagementService";
 import {
   insertProjectSchema,
   insertPermitSchema,
@@ -1313,6 +1315,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching document details:', error);
       res.status(500).json({ error: 'Failed to fetch document details' });
+    }
+  });
+
+  // ==================== PROJECT MANAGEMENT ROUTES ====================
+
+  // Project Tasks Routes
+  app.get('/api/projects/:projectId/tasks', isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await projectManagementService.getProjectTasks(req.params.projectId);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching project tasks:", error);
+      res.status(500).json({ message: "Failed to fetch project tasks" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/tasks', isAuthenticated, async (req, res) => {
+    try {
+      const task = await projectManagementService.createTask({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      res.json(task);
+    } catch (error) {
+      console.error("Error creating task:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.put('/api/tasks/:taskId', isAuthenticated, async (req, res) => {
+    try {
+      const task = await projectManagementService.updateTask(req.params.taskId, req.body);
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.delete('/api/tasks/:taskId', isAuthenticated, async (req, res) => {
+    try {
+      await projectManagementService.deleteTask(req.params.taskId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Task Dependencies Routes
+  app.get('/api/tasks/:taskId/dependencies', isAuthenticated, async (req, res) => {
+    try {
+      const dependencies = await projectManagementService.getTaskDependencies(req.params.taskId);
+      res.json(dependencies);
+    } catch (error) {
+      console.error("Error fetching task dependencies:", error);
+      res.status(500).json({ message: "Failed to fetch task dependencies" });
+    }
+  });
+
+  app.post('/api/tasks/dependencies', isAuthenticated, async (req, res) => {
+    try {
+      const dependency = await projectManagementService.createDependency(req.body);
+      res.json(dependency);
+    } catch (error) {
+      console.error("Error creating dependency:", error);
+      res.status(500).json({ message: error.message || "Failed to create dependency" });
+    }
+  });
+
+  app.delete('/api/dependencies/:dependencyId', isAuthenticated, async (req, res) => {
+    try {
+      await projectManagementService.deleteDependency(req.params.dependencyId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting dependency:", error);
+      res.status(500).json({ message: "Failed to delete dependency" });
+    }
+  });
+
+  // Critical Path Routes
+  app.post('/api/projects/:projectId/calculate-critical-path', isAuthenticated, async (req, res) => {
+    try {
+      await projectManagementService.calculateCriticalPath(req.params.projectId);
+      res.json({ success: true, message: "Critical path calculated successfully" });
+    } catch (error) {
+      console.error("Error calculating critical path:", error);
+      res.status(500).json({ message: "Failed to calculate critical path" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/auto-schedule', isAuthenticated, async (req, res) => {
+    try {
+      await projectManagementService.autoScheduleTasks(req.params.projectId);
+      res.json({ success: true, message: "Tasks auto-scheduled successfully" });
+    } catch (error) {
+      console.error("Error auto-scheduling tasks:", error);
+      res.status(500).json({ message: "Failed to auto-schedule tasks" });
+    }
+  });
+
+  // Project Resources Routes
+  app.get('/api/projects/:projectId/resources', isAuthenticated, async (req, res) => {
+    try {
+      const resources = await projectManagementService.getProjectResources(req.params.projectId);
+      res.json(resources);
+    } catch (error) {
+      console.error("Error fetching project resources:", error);
+      res.status(500).json({ message: "Failed to fetch project resources" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/resources', isAuthenticated, async (req, res) => {
+    try {
+      const resource = await projectManagementService.createResource({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      res.json(resource);
+    } catch (error) {
+      console.error("Error creating resource:", error);
+      res.status(500).json({ message: "Failed to create resource" });
+    }
+  });
+
+  app.post('/api/tasks/:taskId/resource-assignments', isAuthenticated, async (req, res) => {
+    try {
+      const assignment = await projectManagementService.assignResourceToTask({
+        ...req.body,
+        taskId: req.params.taskId
+      });
+      res.json(assignment);
+    } catch (error) {
+      console.error("Error assigning resource to task:", error);
+      res.status(500).json({ message: "Failed to assign resource to task" });
+    }
+  });
+
+  // Project Baselines Routes
+  app.post('/api/projects/:projectId/baselines', isAuthenticated, async (req: any, res) => {
+    try {
+      const baseline = await projectManagementService.createBaseline({
+        ...req.body,
+        projectId: req.params.projectId,
+        createdBy: req.user.claims.sub
+      });
+      res.json(baseline);
+    } catch (error) {
+      console.error("Error creating baseline:", error);
+      res.status(500).json({ message: "Failed to create baseline" });
+    }
+  });
+
+  // Earned Value Management Routes
+  app.get('/api/projects/:projectId/evm', isAuthenticated, async (req, res) => {
+    try {
+      const evm = await projectManagementService.calculateEVM(req.params.projectId);
+      res.json(evm);
+    } catch (error) {
+      console.error("Error calculating EVM:", error);
+      res.status(500).json({ message: error.message || "Failed to calculate EVM" });
+    }
+  });
+
+  // Project Milestones Routes
+  app.get('/api/projects/:projectId/milestones', isAuthenticated, async (req, res) => {
+    try {
+      const milestones = await projectManagementService.getProjectMilestones(req.params.projectId);
+      res.json(milestones);
+    } catch (error) {
+      console.error("Error fetching milestones:", error);
+      res.status(500).json({ message: "Failed to fetch milestones" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/milestones', isAuthenticated, async (req, res) => {
+    try {
+      const milestone = await projectManagementService.createMilestone({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      res.json(milestone);
+    } catch (error) {
+      console.error("Error creating milestone:", error);
+      res.status(500).json({ message: "Failed to create milestone" });
+    }
+  });
+
+  app.put('/api/milestones/:milestoneId/status', isAuthenticated, async (req, res) => {
+    try {
+      const { status, actualDate } = req.body;
+      const milestone = await projectManagementService.updateMilestoneStatus(
+        req.params.milestoneId, 
+        status, 
+        actualDate ? new Date(actualDate) : undefined
+      );
+      res.json(milestone);
+    } catch (error) {
+      console.error("Error updating milestone status:", error);
+      res.status(500).json({ message: "Failed to update milestone status" });
+    }
+  });
+
+  // Working Calendars Routes
+  app.get('/api/projects/:projectId/calendars', isAuthenticated, async (req, res) => {
+    try {
+      const calendars = await projectManagementService.getProjectCalendars(req.params.projectId);
+      res.json(calendars);
+    } catch (error) {
+      console.error("Error fetching project calendars:", error);
+      res.status(500).json({ message: "Failed to fetch project calendars" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/calendars', isAuthenticated, async (req, res) => {
+    try {
+      const calendar = await projectManagementService.createWorkingCalendar({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      res.json(calendar);
+    } catch (error) {
+      console.error("Error creating working calendar:", error);
+      res.status(500).json({ message: "Failed to create working calendar" });
+    }
+  });
+
+  // Project Analytics Routes
+  app.get('/api/projects/:projectId/analytics', isAuthenticated, async (req, res) => {
+    try {
+      const analytics = await projectManagementService.getProjectAnalytics(req.params.projectId);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching project analytics:", error);
+      res.status(500).json({ message: "Failed to fetch project analytics" });
     }
   });
 

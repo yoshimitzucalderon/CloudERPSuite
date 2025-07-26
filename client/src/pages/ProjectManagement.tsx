@@ -1,612 +1,772 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertWbsItemSchema, type Project, type WbsItem, type InsertWbsItem, type User } from "@shared/schema";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  Plus, 
+  Calendar, 
+  Users, 
+  BarChart3, 
+  Target, 
+  AlertCircle, 
+  Clock,
+  TrendingUp,
+  CheckCircle,
+  XCircle,
+  Edit,
+  Trash2,
+  Download,
+  Network,
+  PlayCircle,
+  Calculator,
+  Layers,
+  Share2
+} from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, BarChart3, Target, Clock, TrendingUp, Users } from "lucide-react";
+
+interface ProjectTask {
+  id: string;
+  taskName: string;
+  wbsCode: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  duration: number;
+  percentComplete: number;
+  priority: 'low' | 'normal' | 'high' | 'critical';
+  isOnCriticalPath: boolean;
+  totalFloat: number;
+  assignedToId?: string;
+  estimatedCost?: string;
+  actualCost?: string;
+}
+
+interface ProjectMilestone {
+  id: string;
+  milestoneName: string;
+  targetDate: string;
+  status: 'pending' | 'achieved' | 'delayed' | 'cancelled';
+  criticalityLevel: 'low' | 'medium' | 'high' | 'critical';
+}
 
 export default function ProjectManagement() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [viewMode, setViewMode] = useState("gantt"); // gantt, wbs, critical
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<string>("");
+  const [showNewTaskDialog, setShowNewTaskDialog] = useState(false);
+  const [showResourceDialog, setShowResourceDialog] = useState(false);
+  const [showMilestoneDialog, setShowMilestoneDialog] = useState(false);
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: projects = [], isLoading: projectsLoading } = useQuery({
-    queryKey: ["/api/projects"],
+  // Fetch projects
+  const { data: projects = [] } = useQuery({
+    queryKey: ['/api/projects'],
   });
 
-  const { data: users = [] } = useQuery({
-    queryKey: ["/api/users"],
+  // Fetch project tasks
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+    queryKey: ['/api/projects', selectedProject, 'tasks'],
+    enabled: !!selectedProject,
   });
 
-  const { data: wbsItems = [], isLoading: wbsLoading } = useQuery({
-    queryKey: ["/api/wbs", selectedProjectId],
-    queryFn: () => selectedProjectId ? fetch(`/api/wbs/${selectedProjectId}`).then(res => res.json()) : [],
-    enabled: !!selectedProjectId,
+  // Fetch project milestones
+  const { data: milestones = [] } = useQuery({
+    queryKey: ['/api/projects', selectedProject, 'milestones'],
+    enabled: !!selectedProject,
   });
 
-  const createWbsItemMutation = useMutation({
-    mutationFn: async (data: InsertWbsItem) => {
-      await apiRequest("POST", "/api/wbs", data);
+  // Fetch project resources
+  const { data: resources = [] } = useQuery({
+    queryKey: ['/api/projects', selectedProject, 'resources'],
+    enabled: !!selectedProject,
+  });
+
+  // Fetch project analytics
+  const { data: analytics } = useQuery({
+    queryKey: ['/api/projects', selectedProject, 'analytics'],
+    enabled: !!selectedProject,
+  });
+
+  // Fetch EVM data
+  const { data: evmData } = useQuery({
+    queryKey: ['/api/projects', selectedProject, 'evm'],
+    enabled: !!selectedProject,
+  });
+
+  // Create task mutation
+  const createTaskMutation = useMutation({
+    mutationFn: async (taskData: any) => {
+      return apiRequest('POST', `/api/projects/${selectedProject}/tasks`, taskData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/wbs"] });
-      setIsDialogOpen(false);
-      form.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', selectedProject, 'tasks'] });
+      setShowNewTaskDialog(false);
       toast({
-        title: "Actividad creada",
-        description: "La actividad WBS se ha creado exitosamente.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "No se pudo crear la actividad WBS.",
-        variant: "destructive",
+        title: "Tarea creada exitosamente",
+        description: "La nueva tarea ha sido agregada al cronograma."
       });
     },
   });
 
-  const form = useForm<InsertWbsItem>({
-    resolver: zodResolver(insertWbsItemSchema),
-    defaultValues: {
-      projectId: "",
-      parentId: "",
-      wbsCode: "",
-      name: "",
-      description: "",
-      level: 1,
-      duration: 1,
-      progress: 0,
-      budgetedCost: "0",
-      actualCost: "0",
-      isMilestone: false,
-      isCritical: false,
-      assignedTo: "",
+  // Create resource mutation
+  const createResourceMutation = useMutation({
+    mutationFn: async (resourceData: any) => {
+      return apiRequest('POST', `/api/projects/${selectedProject}/resources`, resourceData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', selectedProject, 'resources'] });
+      setShowResourceDialog(false);
+      toast({
+        title: "Recurso creado exitosamente",
+        description: "El nuevo recurso ha sido agregado al proyecto."
+      });
     },
   });
 
-  const onSubmit = (data: InsertWbsItem) => {
-    // Auto-generate WBS code based on level and project
-    const wbsCode = generateWbsCode(data.level || 1, wbsItems.length + 1);
-    createWbsItemMutation.mutate({ ...data, wbsCode, projectId: selectedProjectId });
-  };
+  // Create milestone mutation
+  const createMilestoneMutation = useMutation({
+    mutationFn: async (milestoneData: any) => {
+      return apiRequest('POST', `/api/projects/${selectedProject}/milestones`, milestoneData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', selectedProject, 'milestones'] });
+      setShowMilestoneDialog(false);
+      toast({
+        title: "Hito creado exitosamente",
+        description: "El nuevo hito ha sido agregado al proyecto."
+      });
+    },
+  });
 
-  const generateWbsCode = (level: number, sequence: number) => {
-    const levelCode = level.toString().padStart(2, '0');
-    const seqCode = sequence.toString().padStart(3, '0');
-    return `${levelCode}.${seqCode}`;
-  };
+  // Calculate critical path mutation
+  const calculateCriticalPathMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/projects/${selectedProject}/calculate-critical-path`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', selectedProject, 'tasks'] });
+      toast({
+        title: "Ruta crítica calculada",
+        description: "El análisis de ruta crítica se ha actualizado."
+      });
+    },
+  });
 
-  const getAssignedUserName = (userId: string) => {
-    const user = users.find((u: User) => u.id === userId);
-    return user ? `${user.firstName} ${user.lastName}` : "Sin asignar";
-  };
+  // Auto-schedule tasks mutation
+  const autoScheduleMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/projects/${selectedProject}/auto-schedule`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', selectedProject, 'tasks'] });
+      toast({
+        title: "Tareas reprogramadas",
+        description: "El cronograma se ha actualizado automáticamente."
+      });
+    },
+  });
 
-  const getProjectName = (projectId: string) => {
-    const project = projects.find((p: Project) => p.id === projectId);
-    return project?.name || "Seleccionar proyecto";
-  };
-
-  const calculateProjectMetrics = () => {
-    if (!wbsItems.length) return { totalTasks: 0, completedTasks: 0, criticalTasks: 0, totalBudget: 0 };
+  const handleCreateTask = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     
-    const totalTasks = wbsItems.length;
-    const completedTasks = wbsItems.filter((item: WbsItem) => item.progress === 100).length;
-    const criticalTasks = wbsItems.filter((item: WbsItem) => item.isCritical).length;
-    const totalBudget = wbsItems.reduce((sum: number, item: WbsItem) => 
-      sum + parseFloat(item.budgetedCost || "0"), 0);
-    
-    return { totalTasks, completedTasks, criticalTasks, totalBudget };
+    const taskData = {
+      wbsCode: formData.get('wbsCode') as string,
+      taskName: formData.get('taskName') as string,
+      description: formData.get('description') as string,
+      startDate: formData.get('startDate') as string,
+      endDate: formData.get('endDate') as string,
+      priority: formData.get('priority') as string,
+      assignedToId: formData.get('assignedToId') as string,
+      estimatedCost: formData.get('estimatedCost') as string,
+      duration: Math.ceil((new Date(formData.get('endDate') as string).getTime() - new Date(formData.get('startDate') as string).getTime()) / (1000 * 60 * 60 * 24)),
+    };
+
+    createTaskMutation.mutate(taskData);
   };
 
-  const metrics = calculateProjectMetrics();
+  const handleCreateResource = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    const resourceData = {
+      resourceName: formData.get('resourceName') as string,
+      resourceType: formData.get('resourceType') as string,
+      costPerHour: formData.get('costPerHour') as string,
+      maxUnitsAvailable: formData.get('maxUnitsAvailable') as string,
+    };
 
-  const renderGanttView = () => {
-    const sortedItems = [...wbsItems].sort((a: WbsItem, b: WbsItem) => 
-      (a.wbsCode || "").localeCompare(b.wbsCode || ""));
+    createResourceMutation.mutate(resourceData);
+  };
 
-    return (
-      <div className="space-y-4">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-semibold mb-4">Diagrama de Gantt - Vista Simplificada</h3>
-          <div className="space-y-2">
-            {sortedItems.map((item: WbsItem) => (
-              <div key={item.id} className="flex items-center space-x-4 p-3 bg-white rounded border">
-                <div className="w-20 text-sm font-mono">{item.wbsCode}</div>
-                <div className="flex-1">
-                  <div className="font-medium">{item.name}</div>
-                  <div className="text-sm text-gray-500">{item.description}</div>
-                </div>
-                <div className="w-32 text-sm">
-                  <div>Duración: {item.duration} días</div>
-                  <div>Asignado: {getAssignedUserName(item.assignedTo || "")}</div>
-                </div>
-                <div className="w-24">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          item.progress === 100 ? 'bg-green-500' : 
-                          item.progress >= 50 ? 'bg-blue-500' : 'bg-yellow-500'
-                        }`}
-                        style={{ width: `${item.progress}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm">{item.progress}%</span>
+  const handleCreateMilestone = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    const milestoneData = {
+      milestoneName: formData.get('milestoneName') as string,
+      description: formData.get('description') as string,
+      targetDate: formData.get('targetDate') as string,
+      criticalityLevel: formData.get('criticalityLevel') as string,
+    };
+
+    createMilestoneMutation.mutate(milestoneData);
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'normal': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getMilestoneStatusColor = (status: string) => {
+    switch (status) {
+      case 'achieved': return 'bg-green-100 text-green-800';
+      case 'delayed': return 'bg-red-100 text-red-800';
+      case 'cancelled': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-blue-100 text-blue-800';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Gestión de Proyectos</h1>
+            <p className="text-gray-600">Sistema avanzado con Microsoft Project Integration, Gantt y ruta crítica</p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => calculateCriticalPathMutation.mutate()} disabled={!selectedProject || calculateCriticalPathMutation.isPending}>
+              <Calculator className="w-4 h-4 mr-2" />
+              {calculateCriticalPathMutation.isPending ? 'Calculando...' : 'Calcular CPM'}
+            </Button>
+            <Button variant="outline" onClick={() => autoScheduleMutation.mutate()} disabled={!selectedProject || autoScheduleMutation.isPending}>
+              <PlayCircle className="w-4 h-4 mr-2" />
+              {autoScheduleMutation.isPending ? 'Programando...' : 'Auto-Schedule'}
+            </Button>
+            <Button variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Exportar MS Project
+            </Button>
+            <Dialog open={showNewTaskDialog} onOpenChange={setShowNewTaskDialog}>
+              <DialogTrigger asChild>
+                <Button disabled={!selectedProject}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nueva Tarea
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Crear Nueva Tarea</DialogTitle>
+                  <DialogDescription>
+                    Agrega una nueva tarea al cronograma del proyecto
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateTask} className="space-y-4">
+                  <div>
+                    <Label htmlFor="wbsCode">Código WBS</Label>
+                    <Input id="wbsCode" name="wbsCode" placeholder="1.2.3" required />
                   </div>
-                </div>
-                <div className="flex space-x-1">
-                  {item.isMilestone && (
-                    <Badge variant="outline" className="text-purple-600">Hito</Badge>
-                  )}
-                  {item.isCritical && (
-                    <Badge variant="destructive">Crítica</Badge>
-                  )}
-                </div>
-              </div>
-            ))}
+                  <div>
+                    <Label htmlFor="taskName">Nombre de la Tarea</Label>
+                    <Input id="taskName" name="taskName" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Descripción</Label>
+                    <Textarea id="description" name="description" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="startDate">Fecha Inicio</Label>
+                      <Input id="startDate" name="startDate" type="date" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="endDate">Fecha Fin</Label>
+                      <Input id="endDate" name="endDate" type="date" required />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="priority">Prioridad</Label>
+                    <Select name="priority" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar prioridad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baja</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                        <SelectItem value="critical">Crítica</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="assignedToId">Responsable</Label>
+                    <Input id="assignedToId" name="assignedToId" placeholder="ID del usuario" />
+                  </div>
+                  <div>
+                    <Label htmlFor="estimatedCost">Costo Estimado</Label>
+                    <Input id="estimatedCost" name="estimatedCost" type="number" step="0.01" />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={createTaskMutation.isPending}>
+                    {createTaskMutation.isPending ? 'Creando...' : 'Crear Tarea'}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
-      </div>
-    );
-  };
 
-  const renderWbsView = () => {
-    const groupedByLevel = wbsItems.reduce((acc: any, item: WbsItem) => {
-      const level = item.level || 1;
-      if (!acc[level]) acc[level] = [];
-      acc[level].push(item);
-      return acc;
-    }, {});
+        {/* Project Selector */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Seleccionar Proyecto</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedProject} onValueChange={setSelectedProject}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar un proyecto para gestionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {(projects as any[]).map((project: any) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
 
-    return (
-      <div className="space-y-6">
-        {Object.entries(groupedByLevel).map(([level, items]: [string, any]) => (
-          <div key={level} className="space-y-3">
-            <h3 className="text-lg font-semibold">Nivel {level}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {items.map((item: WbsItem) => (
-                <Card key={item.id}>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-mono text-sm text-gray-500">{item.wbsCode}</span>
-                      <div className="flex space-x-1">
-                        {item.isMilestone && (
-                          <Badge variant="outline" className="text-purple-600 text-xs">Hito</Badge>
-                        )}
-                        {item.isCritical && (
-                          <Badge variant="destructive" className="text-xs">Crítica</Badge>
-                        )}
-                      </div>
-                    </div>
-                    <h4 className="font-semibold mb-2">{item.name}</h4>
-                    <p className="text-sm text-gray-600 mb-3">{item.description}</p>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Duración:</span>
-                        <span>{item.duration} días</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Progreso:</span>
-                        <span>{item.progress}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Presupuesto:</span>
-                        <span>${parseFloat(item.budgetedCost || "0").toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Asignado:</span>
-                        <span className="text-xs">{getAssignedUserName(item.assignedTo || "")}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
+        {selectedProject && (
+          <Tabs defaultValue="gantt" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="gantt">Diagrama Gantt</TabsTrigger>
+              <TabsTrigger value="tasks">Lista de Tareas</TabsTrigger>
+              <TabsTrigger value="resources">Recursos</TabsTrigger>
+              <TabsTrigger value="milestones">Hitos</TabsTrigger>
+              <TabsTrigger value="critical-path">Ruta Crítica</TabsTrigger>
+              <TabsTrigger value="analytics">Analíticas EVM</TabsTrigger>
+            </TabsList>
 
-  const renderCriticalPathView = () => {
-    const criticalItems = wbsItems.filter((item: WbsItem) => item.isCritical);
-    
-    return (
-      <div className="space-y-4">
-        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-          <h3 className="font-semibold text-red-800 mb-2">Ruta Crítica del Proyecto</h3>
-          <p className="text-red-700 text-sm">
-            Actividades que no pueden retrasarse sin afectar la fecha de entrega del proyecto.
-          </p>
-        </div>
-        {criticalItems.length === 0 ? (
-          <Card className="p-6">
-            <div className="text-center text-gray-500">
-              <Target className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium mb-2">No hay actividades críticas identificadas</h3>
-              <p>Marca las actividades críticas en la vista WBS o Gantt</p>
-            </div>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {criticalItems.map((item: WbsItem) => (
-              <Card key={item.id} className="border-red-200">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="font-mono text-sm bg-red-100 text-red-800 px-2 py-1 rounded">
-                          {item.wbsCode}
-                        </span>
-                        <h4 className="font-semibold">{item.name}</h4>
+            <TabsContent value="gantt">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Diagrama de Gantt Interactivo
+                  </CardTitle>
+                  <CardDescription>
+                    Vista cronológica con ruta crítica y dependencias
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-gray-100 p-8 rounded-lg text-center">
+                    <BarChart3 className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Diagrama de Gantt</h3>
+                    <p className="text-gray-600 mb-4">
+                      Visualización interactiva del cronograma con drag & drop para reprogramación
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-white p-3 rounded border">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-3 h-3 bg-red-500 rounded"></div>
+                          <span>Tareas Críticas</span>
+                        </div>
+                        <p className="text-gray-600">Ruta crítica calculada automáticamente</p>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3">{item.description}</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium">Duración:</span>
-                          <div>{item.duration} días</div>
+                      <div className="bg-white p-3 rounded border">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                          <span>Dependencias</span>
                         </div>
-                        <div>
-                          <span className="font-medium">Progreso:</span>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-12 bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="h-2 bg-red-500 rounded-full"
-                                style={{ width: `${item.progress}%` }}
-                              ></div>
-                            </div>
-                            <span>{item.progress}%</span>
-                          </div>
-                        </div>
-                        <div>
-                          <span className="font-medium">Presupuesto:</span>
-                          <div>${parseFloat(item.budgetedCost || "0").toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <span className="font-medium">Responsable:</span>
-                          <div>{getAssignedUserName(item.assignedTo || "")}</div>
-                        </div>
+                        <p className="text-gray-600">Relaciones FS, SS, FF, SF</p>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            </TabsContent>
+
+            <TabsContent value="tasks">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Lista de Tareas WBS</CardTitle>
+                  <CardDescription>
+                    Work Breakdown Structure con jerarquía y dependencias
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {tasksLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (tasks as any[]).length === 0 ? (
+                    <div className="text-center py-8">
+                      <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No hay tareas</h3>
+                      <p className="text-gray-600 mb-4">Crea la primera tarea para comenzar el cronograma</p>
+                      <Button onClick={() => setShowNewTaskDialog(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Crear Primera Tarea
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {(tasks as ProjectTask[]).map((task: ProjectTask) => (
+                        <div key={task.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <Badge className={getPriorityColor(task.priority)}>
+                                {task.priority}
+                              </Badge>
+                              <span className="font-mono text-sm text-gray-500">{task.wbsCode}</span>
+                              <h3 className="font-medium">{task.taskName}</h3>
+                              {task.isOnCriticalPath && (
+                                <Badge variant="destructive">Crítica</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-4 gap-4 text-sm text-gray-600 mb-3">
+                            <div>
+                              <span className="font-medium">Duración:</span> {task.duration} días
+                            </div>
+                            <div>
+                              <span className="font-medium">Inicio:</span> {new Date(task.startDate).toLocaleDateString()}
+                            </div>
+                            <div>
+                              <span className="font-medium">Fin:</span> {new Date(task.endDate).toLocaleDateString()}
+                            </div>
+                            <div>
+                              <span className="font-medium">Float:</span> {task.totalFloat} días
+                            </div>
+                          </div>
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span>Progreso</span>
+                              <span>{task.percentComplete}%</span>
+                            </div>
+                            <Progress value={task.percentComplete} className="h-2" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="resources">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Gestión de Recursos
+                  </CardTitle>
+                  <CardDescription>
+                    Personas, equipos y materiales asignados al proyecto
+                  </CardDescription>
+                  <Button onClick={() => setShowResourceDialog(true)} className="w-fit">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar Recurso
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {(resources as any[]).length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No hay recursos</h3>
+                      <p className="text-gray-600">Agrega recursos para comenzar la asignación</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(resources as any[]).map((resource: any) => (
+                        <Card key={resource.id}>
+                          <CardContent className="p-4">
+                            <h4 className="font-medium mb-2">{resource.resourceName}</h4>
+                            <div className="space-y-1 text-sm text-gray-600">
+                              <p>Tipo: {resource.resourceType}</p>
+                              <p>Costo/hora: ${resource.costPerHour}</p>
+                              <p>Disponibilidad: {resource.maxUnitsAvailable}%</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Dialog open={showResourceDialog} onOpenChange={setShowResourceDialog}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Agregar Recurso</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateResource} className="space-y-4">
+                    <div>
+                      <Label htmlFor="resourceName">Nombre del Recurso</Label>
+                      <Input id="resourceName" name="resourceName" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="resourceType">Tipo</Label>
+                      <Select name="resourceType" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="human">Persona</SelectItem>
+                          <SelectItem value="equipment">Equipo</SelectItem>
+                          <SelectItem value="material">Material</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="costPerHour">Costo por Hora</Label>
+                      <Input id="costPerHour" name="costPerHour" type="number" step="0.01" />
+                    </div>
+                    <div>
+                      <Label htmlFor="maxUnitsAvailable">Disponibilidad (%)</Label>
+                      <Input id="maxUnitsAvailable" name="maxUnitsAvailable" type="number" min="0" max="100" defaultValue="100" />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={createResourceMutation.isPending}>
+                      {createResourceMutation.isPending ? 'Creando...' : 'Crear Recurso'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </TabsContent>
+
+            <TabsContent value="milestones">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="w-5 h-5" />
+                    Hitos del Proyecto
+                  </CardTitle>
+                  <Button onClick={() => setShowMilestoneDialog(true)} className="w-fit">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar Hito
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {(milestones as any[]).length === 0 ? (
+                      <div className="text-center py-8">
+                        <Target className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No hay hitos definidos</h3>
+                        <p className="text-gray-600">Los hitos ayudan a trackear el progreso del proyecto</p>
+                      </div>
+                    ) : (
+                      (milestones as ProjectMilestone[]).map((milestone: ProjectMilestone) => (
+                        <div key={milestone.id} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${milestone.status === 'achieved' ? 'bg-green-500' : milestone.status === 'delayed' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                              <h3 className="font-medium">{milestone.milestoneName}</h3>
+                              <Badge className={getMilestoneStatusColor(milestone.status)}>
+                                {milestone.status}
+                              </Badge>
+                              <Badge variant="outline">
+                                {milestone.criticalityLevel}
+                              </Badge>
+                            </div>
+                            <span className="text-sm text-gray-600">
+                              {new Date(milestone.targetDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Dialog open={showMilestoneDialog} onOpenChange={setShowMilestoneDialog}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Agregar Hito</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateMilestone} className="space-y-4">
+                    <div>
+                      <Label htmlFor="milestoneName">Nombre del Hito</Label>
+                      <Input id="milestoneName" name="milestoneName" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Descripción</Label>
+                      <Textarea id="description" name="description" />
+                    </div>
+                    <div>
+                      <Label htmlFor="targetDate">Fecha Objetivo</Label>
+                      <Input id="targetDate" name="targetDate" type="date" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="criticalityLevel">Nivel de Criticidad</Label>
+                      <Select name="criticalityLevel" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar nivel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Bajo</SelectItem>
+                          <SelectItem value="medium">Medio</SelectItem>
+                          <SelectItem value="high">Alto</SelectItem>
+                          <SelectItem value="critical">Crítico</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={createMilestoneMutation.isPending}>
+                      {createMilestoneMutation.isPending ? 'Creando...' : 'Crear Hito'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </TabsContent>
+
+            <TabsContent value="critical-path">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    Análisis de Ruta Crítica (CPM)
+                  </CardTitle>
+                  <CardDescription>
+                    Critical Path Method con análisis de float y optimización
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {(analytics as any)?.criticalPath?.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <h3 className="font-medium text-red-800 mb-2">Tareas en Ruta Crítica</h3>
+                        <p className="text-sm text-red-600 mb-3">
+                          Estas tareas determinan la duración mínima del proyecto. Cualquier retraso aquí afecta la fecha de finalización.
+                        </p>
+                        <div className="space-y-2">
+                          {((analytics as any).criticalPath as ProjectTask[]).map((task: ProjectTask) => (
+                            <div key={task.id} className="bg-white p-3 rounded border border-red-300">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-mono text-sm text-gray-500">{task.wbsCode}</span>
+                                  <h4 className="font-medium">{task.taskName}</h4>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {task.duration} días | Float: {task.totalFloat}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-100 p-8 rounded-lg text-center">
+                      <AlertCircle className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Ruta Crítica No Calculada</h3>
+                      <p className="text-gray-600 mb-4">
+                        Ejecuta el análisis CPM para identificar las tareas críticas del proyecto
+                      </p>
+                      <Button onClick={() => calculateCriticalPathMutation.mutate()} disabled={calculateCriticalPathMutation.isPending}>
+                        <Calculator className="w-4 h-4 mr-2" />
+                        {calculateCriticalPathMutation.isPending ? 'Calculando...' : 'Calcular Ruta Crítica'}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="analytics">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Earned Value Management (EVM)
+                  </CardTitle>
+                  <CardDescription>
+                    Análisis de valor ganado y métricas de performance
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {evmData ? (
+                    <div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {(parseFloat((evmData as any).schedulePerformanceIndex) * 100).toFixed(1)}%
+                          </div>
+                          <div className="text-sm text-blue-600">Schedule Performance Index</div>
+                        </div>
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">
+                            {(parseFloat((evmData as any).costPerformanceIndex) * 100).toFixed(1)}%
+                          </div>
+                          <div className="text-sm text-green-600">Cost Performance Index</div>
+                        </div>
+                        <div className="bg-orange-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-orange-600">
+                            ${parseFloat((evmData as any).scheduleVariance).toFixed(0)}
+                          </div>
+                          <div className="text-sm text-orange-600">Schedule Variance</div>
+                        </div>
+                        <div className="bg-purple-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-purple-600">
+                            ${parseFloat((evmData as any).costVariance).toFixed(0)}
+                          </div>
+                          <div className="text-sm text-purple-600">Cost Variance</div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-medium mb-2">Planned Value (PV)</h4>
+                          <div className="text-xl font-bold">${parseFloat((evmData as any).plannedValue).toLocaleString()}</div>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-medium mb-2">Earned Value (EV)</h4>
+                          <div className="text-xl font-bold">${parseFloat((evmData as any).earnedValue).toLocaleString()}</div>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-medium mb-2">Actual Cost (AC)</h4>
+                          <div className="text-xl font-bold">${parseFloat((evmData as any).actualCost).toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-100 p-8 rounded-lg text-center">
+                      <TrendingUp className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Métricas EVM</h3>
+                      <p className="text-gray-600 mb-4">
+                        Se requiere un baseline activo para calcular las métricas de Earned Value Management
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
-    );
-  };
-
-  if (projectsLoading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="animate-pulse space-y-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 bg-gray-200 rounded"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Gestión de Proyectos</h1>
-          <p className="text-gray-600">WBS, Gantt y Ruta Crítica para desarrollos inmobiliarios</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button disabled={!selectedProjectId}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Actividad
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Crear Nueva Actividad WBS</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre de la Actividad</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Excavación y cimentación" {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Descripción</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Descripción detallada..." {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="level"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nivel WBS</FormLabel>
-                        <FormControl>
-                          <Input type="number" min="1" max="5" {...field} 
-                            value={field.value || 1}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="duration"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duración (días)</FormLabel>
-                        <FormControl>
-                          <Input type="number" min="1" {...field} 
-                            value={field.value || 1}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="budgetedCost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Costo Presupuestado</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="0" {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="assignedTo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Asignar a</FormLabel>
-                      <FormControl>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar responsable" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {users.map((user: User) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.firstName} {user.lastName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex space-x-4">
-                  <FormField
-                    control={form.control}
-                    name="isMilestone"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Es un Hito</FormLabel>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="isCritical"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Actividad Crítica</FormLabel>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createWbsItemMutation.isPending}>
-                    {createWbsItemMutation.isPending ? "Creando..." : "Crear Actividad"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Project Selection */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="flex-1">
-              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar proyecto para gestionar" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project: Project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name} - {project.type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Input
-              placeholder="Buscar actividades..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {selectedProjectId && (
-        <>
-          {/* Project Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Actividades</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metrics.totalTasks}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completadas</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{metrics.completedTasks}</div>
-                <div className="text-sm text-gray-500">
-                  {metrics.totalTasks > 0 ? Math.round((metrics.completedTasks / metrics.totalTasks) * 100) : 0}% del total
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ruta Crítica</CardTitle>
-                <Target className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{metrics.criticalTasks}</div>
-                <div className="text-sm text-gray-500">actividades críticas</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Presupuesto Total</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${metrics.totalBudget.toLocaleString()}</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* View Mode Selector */}
-          <div className="flex space-x-2">
-            <Button 
-              variant={viewMode === "gantt" ? "default" : "outline"}
-              onClick={() => setViewMode("gantt")}
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              Vista Gantt
-            </Button>
-            <Button 
-              variant={viewMode === "wbs" ? "default" : "outline"}
-              onClick={() => setViewMode("wbs")}
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Vista WBS
-            </Button>
-            <Button 
-              variant={viewMode === "critical" ? "default" : "outline"}
-              onClick={() => setViewMode("critical")}
-            >
-              <Target className="w-4 h-4 mr-2" />
-              Ruta Crítica
-            </Button>
-          </div>
-
-          {/* Content based on view mode */}
-          {wbsLoading ? (
-            <div className="animate-pulse space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {viewMode === "gantt" && renderGanttView()}
-              {viewMode === "wbs" && renderWbsView()}
-              {viewMode === "critical" && renderCriticalPathView()}
-            </>
-          )}
-        </>
-      )}
-
-      {!selectedProjectId && (
-        <Card className="p-6">
-          <div className="text-center text-gray-500">
-            <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">Selecciona un Proyecto</h3>
-            <p>Elige un proyecto para gestionar su cronograma y actividades WBS</p>
-          </div>
-        </Card>
-      )}
     </div>
   );
-}
+};

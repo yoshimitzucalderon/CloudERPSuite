@@ -996,3 +996,139 @@ export type InsertWorkflowNotification = z.infer<typeof insertWorkflowNotificati
 export type WorkflowNotification = typeof workflowNotifications.$inferSelect;
 export type InsertEscalationRecord = z.infer<typeof insertEscalationRecordSchema>;
 export type EscalationRecord = typeof escalationRecords.$inferSelect;
+
+// Project Management and Critical Path Tables
+export const projectTasks = pgTable("project_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  wbsCode: varchar("wbs_code").notNull(), // e.g., "1.2.3.1"
+  taskName: varchar("task_name").notNull(),
+  description: text("description"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  duration: integer("duration"), // duration in days
+  percentComplete: integer("percent_complete").default(0),
+  priority: varchar("priority", { enum: ["low", "normal", "high", "critical"] }).default("normal"),
+  taskType: varchar("task_type", { enum: ["task", "milestone", "summary"] }).default("task"),
+  isOnCriticalPath: boolean("is_on_critical_path").default(false),
+  totalFloat: integer("total_float").default(0), // slack time in days
+  parentTaskId: varchar("parent_task_id").references(() => projectTasks.id),
+  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  estimatedCost: decimal("estimated_cost", { precision: 12, scale: 2 }),
+  actualCost: decimal("actual_cost", { precision: 12, scale: 2 }),
+  baseline: jsonb("baseline"), // stores baseline dates and costs
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const taskDependencies = pgTable("task_dependencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  predecessorTaskId: varchar("predecessor_task_id").references(() => projectTasks.id, { onDelete: "cascade" }),
+  successorTaskId: varchar("successor_task_id").references(() => projectTasks.id, { onDelete: "cascade" }),
+  dependencyType: varchar("dependency_type", { enum: ["FS", "SS", "FF", "SF"] }).default("FS"), // Finish-to-Start, Start-to-Start, Finish-to-Finish, Start-to-Finish
+  leadLag: integer("lead_lag").default(0), // lead (negative) or lag (positive) in days
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const projectResources = pgTable("project_resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  resourceName: varchar("resource_name").notNull(),
+  resourceType: varchar("resource_type", { enum: ["human", "equipment", "material"] }).notNull(),
+  costPerHour: decimal("cost_per_hour", { precision: 10, scale: 2 }),
+  costPerDay: decimal("cost_per_day", { precision: 10, scale: 2 }),
+  maxUnitsAvailable: decimal("max_units_available", { precision: 8, scale: 2 }).default(1),
+  workingCalendarId: varchar("working_calendar_id"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const taskResourceAssignments = pgTable("task_resource_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").references(() => projectTasks.id, { onDelete: "cascade" }),
+  resourceId: varchar("resource_id").references(() => projectResources.id, { onDelete: "cascade" }),
+  unitsAssigned: decimal("units_assigned", { precision: 8, scale: 2 }).default(1), // percentage of resource allocation
+  workHours: decimal("work_hours", { precision: 10, scale: 2 }),
+  actualWorkHours: decimal("actual_work_hours", { precision: 10, scale: 2 }),
+  costAssigned: decimal("cost_assigned", { precision: 12, scale: 2 }),
+  actualCost: decimal("actual_cost", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const projectBaselines = pgTable("project_baselines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  baselineName: varchar("baseline_name").notNull(),
+  baselineDate: timestamp("baseline_date").defaultNow(),
+  totalDuration: integer("total_duration"),
+  totalCost: decimal("total_cost", { precision: 15, scale: 2 }),
+  plannedStartDate: timestamp("planned_start_date"),
+  plannedEndDate: timestamp("planned_end_date"),
+  isActive: boolean("is_active").default(false),
+  description: text("description"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const workingCalendars = pgTable("working_calendars", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id),
+  calendarName: varchar("calendar_name").notNull(),
+  workingDays: jsonb("working_days"), // [1,2,3,4,5] for Mon-Fri
+  workingHours: jsonb("working_hours"), // {start: "08:00", end: "17:00"}
+  holidays: jsonb("holidays"), // array of holiday dates
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const projectMilestones = pgTable("project_milestones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  milestoneName: varchar("milestone_name").notNull(),
+  description: text("description"),
+  targetDate: timestamp("target_date"),
+  actualDate: timestamp("actual_date"),
+  status: varchar("status", { enum: ["pending", "achieved", "delayed", "cancelled"] }).default("pending"),
+  criticalityLevel: varchar("criticality_level", { enum: ["low", "medium", "high", "critical"] }).default("medium"),
+  responsibleUserId: varchar("responsible_user_id").references(() => users.id),
+  linkedTaskIds: jsonb("linked_task_ids"), // array of task IDs related to this milestone
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const earnedValueMetrics = pgTable("earned_value_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  reportDate: timestamp("report_date").defaultNow(),
+  plannedValue: decimal("planned_value", { precision: 15, scale: 2 }), // PV - Planned Value
+  earnedValue: decimal("earned_value", { precision: 15, scale: 2 }), // EV - Earned Value  
+  actualCost: decimal("actual_cost", { precision: 15, scale: 2 }), // AC - Actual Cost
+  budgetAtCompletion: decimal("budget_at_completion", { precision: 15, scale: 2 }), // BAC
+  estimateAtCompletion: decimal("estimate_at_completion", { precision: 15, scale: 2 }), // EAC
+  schedulePerformanceIndex: decimal("schedule_performance_index", { precision: 8, scale: 4 }), // SPI = EV/PV
+  costPerformanceIndex: decimal("cost_performance_index", { precision: 8, scale: 4 }), // CPI = EV/AC
+  scheduleVariance: decimal("schedule_variance", { precision: 15, scale: 2 }), // SV = EV - PV
+  costVariance: decimal("cost_variance", { precision: 15, scale: 2 }), // CV = EV - AC
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Type exports for Project Management
+export type ProjectTask = typeof projectTasks.$inferSelect;
+export type InsertProjectTask = typeof projectTasks.$inferInsert;
+export type TaskDependency = typeof taskDependencies.$inferSelect;
+export type InsertTaskDependency = typeof taskDependencies.$inferInsert;
+export type ProjectResource = typeof projectResources.$inferSelect;
+export type InsertProjectResource = typeof projectResources.$inferInsert;
+export type TaskResourceAssignment = typeof taskResourceAssignments.$inferSelect;
+export type InsertTaskResourceAssignment = typeof taskResourceAssignments.$inferInsert;
+export type ProjectBaseline = typeof projectBaselines.$inferSelect;
+export type InsertProjectBaseline = typeof projectBaselines.$inferInsert;
+export type WorkingCalendar = typeof workingCalendars.$inferSelect;
+export type InsertWorkingCalendar = typeof workingCalendars.$inferInsert;
+export type ProjectMilestone = typeof projectMilestones.$inferSelect;
+export type InsertProjectMilestone = typeof projectMilestones.$inferInsert;
+export type EarnedValueMetric = typeof earnedValueMetrics.$inferSelect;
+export type InsertEarnedValueMetric = typeof earnedValueMetrics.$inferInsert;
