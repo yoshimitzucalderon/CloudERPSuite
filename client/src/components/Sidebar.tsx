@@ -39,7 +39,7 @@ export function Sidebar() {
         {/* Logo Header */}
         <div className="flex flex-col items-center justify-center h-24 px-4 border-b border-gray-200">
           <Logo className="h-10 w-auto mb-3" />
-          <span className="text-xs font-medium text-gray-600">ERP Inmobiliario</span>
+          <span className="text-xs font-medium text-gray-600" style={{ paddingLeft: '2px' }}>ERP</span>
         </div>
 
         {/* Navigation Menu */}
