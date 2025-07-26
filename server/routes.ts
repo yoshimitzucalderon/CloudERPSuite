@@ -1794,6 +1794,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { action, comments } = req.body;
       const user = req.user as any;
       
+      // Validar acción
+      if (!['approve', 'reject', 'reverse'].includes(action)) {
+        return res.status(400).json({ message: "Invalid action" });
+      }
+      
       // Mock approval logic - in real implementation, update database
       const approvalResult = {
         capitalCallId: id,
@@ -1804,6 +1809,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date(),
         success: true
       };
+      
+      // Simular lógica de reversión
+      if (action === 'reverse') {
+        approvalResult.success = true; // En implementación real, validar que no hay aprobaciones posteriores
+      }
       
       res.json(approvalResult);
     } catch (error) {

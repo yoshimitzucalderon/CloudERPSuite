@@ -17,6 +17,7 @@ export default function CapitalCallApproval() {
   const [, setLocation] = useLocation();
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [comments, setComments] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -39,6 +40,7 @@ export default function CapitalCallApproval() {
       queryClient.invalidateQueries({ queryKey: ['/api/capital-calls', id] });
       setShowApprovalDialog(false);
       setShowRejectionDialog(false);
+      setShowReverseDialog(false);
       setComments("");
       toast({
         title: "Acción completada",
@@ -108,12 +110,40 @@ export default function CapitalCallApproval() {
     return userStep && userStep.status === 'pendiente';
   };
 
+  const canUserReverse = () => {
+    if (!capitalCall || !currentUser) return false;
+    
+    const call = capitalCall as any;
+    const userStep = getCurrentUserStep();
+    
+    // Solo puede revertir si ya aprobó
+    if (!userStep || userStep.status !== 'firmado') return false;
+    
+    // Buscar el índice del usuario actual en el flujo
+    const userIndex = call.authorizations?.findIndex((auth: any) => 
+      auth.userName === userStep.userName
+    );
+    
+    if (userIndex === -1) return false;
+    
+    // Verificar que no haya aprobaciones posteriores
+    const hasSubsequentApprovals = call.authorizations
+      ?.slice(userIndex + 1)
+      ?.some((auth: any) => auth.status === 'firmado');
+    
+    return !hasSubsequentApprovals;
+  };
+
   const handleApprove = () => {
     approvalMutation.mutate({ action: 'approve', comments });
   };
 
   const handleReject = () => {
     approvalMutation.mutate({ action: 'reject', comments });
+  };
+
+  const handleReverse = () => {
+    approvalMutation.mutate({ action: 'reverse', comments });
   };
 
   if (isLoading) {
@@ -297,6 +327,12 @@ export default function CapitalCallApproval() {
                         <Calendar className="h-3 w-3" />
                         {new Date(auth.signedAt).toLocaleDateString('es-MX')}
                       </div>
+                      {/* Mostrar si puede revertir */}
+                      {auth.userName === userStep?.userName && canUserReverse() && (
+                        <div className="text-xs text-orange-600 font-medium">
+                          Puede revertir
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-muted-foreground">Pendiente</div>
@@ -446,13 +482,73 @@ export default function CapitalCallApproval() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-sm">
-              <strong>Fecha de decisión:</strong> {userStep.signedAt ? new Date(userStep.signedAt).toLocaleDateString('es-MX') : 'N/A'}
-              {userStep.comments && (
-                <div className="mt-2">
-                  <strong>Comentarios:</strong>
-                  <div className="mt-1 p-2 bg-white rounded border text-sm">
-                    {userStep.comments}
+            <div className="space-y-4">
+              <div className="text-sm">
+                <strong>Fecha de decisión:</strong> {userStep.signedAt ? new Date(userStep.signedAt).toLocaleDateString('es-MX') : 'N/A'}
+                {userStep.comments && (
+                  <div className="mt-2">
+                    <strong>Comentarios:</strong>
+                    <div className="mt-1 p-2 bg-white rounded border text-sm">
+                      {userStep.comments}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Reverse approval option */}
+              {canUserReverse() && (
+                <div className="pt-4 border-t">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">¿Necesita revertir su aprobación?</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Puede revertir su aprobación mientras no haya aprobaciones posteriores en el flujo.
+                      </p>
+                    </div>
+                    <Dialog open={showReverseDialog} onOpenChange={setShowReverseDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-orange-600 border-orange-300 hover:bg-orange-50">
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Revertir Aprobación
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Confirmar Reversión</DialogTitle>
+                          <DialogDescription>
+                            ¿Está seguro que desea revertir su aprobación? Esta acción regresará el capital call a estado pendiente para su revisión.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="reverse-comments" className="text-sm font-medium">
+                              Motivo de la reversión *
+                            </Label>
+                            <Textarea
+                              id="reverse-comments"
+                              value={comments}
+                              onChange={(e) => setComments(e.target.value)}
+                              placeholder="Explique por qué necesita revertir su aprobación..."
+                              className="mt-1"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setShowReverseDialog(false)}>
+                            Cancelar
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                            onClick={handleReverse} 
+                            disabled={approvalMutation.isPending || !comments.trim()}
+                          >
+                            {approvalMutation.isPending ? "Procesando..." : "Confirmar Reversión"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               )}
