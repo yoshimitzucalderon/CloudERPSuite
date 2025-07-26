@@ -6,6 +6,7 @@ import {
   budgetItems,
   documents,
   calendarEvents,
+  wbsItems,
   type User,
   type UpsertUser,
   type Project,
@@ -20,6 +21,8 @@ import {
   type InsertDocument,
   type CalendarEvent,
   type InsertCalendarEvent,
+  type WbsItem,
+  type InsertWbsItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql } from "drizzle-orm";
@@ -60,6 +63,11 @@ export interface IStorage {
   createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
   updateCalendarEvent(id: string, event: Partial<InsertCalendarEvent>): Promise<CalendarEvent | undefined>;
   deleteCalendarEvent(id: string): Promise<boolean>;
+
+  // WBS operations for project management
+  getWbsItemsByProject(projectId: string): Promise<WbsItem[]>;
+  createWbsItem(item: InsertWbsItem): Promise<WbsItem>;
+  updateWbsItem(id: string, item: Partial<InsertWbsItem>): Promise<WbsItem | undefined>;
   
   // Dashboard metrics
   getDashboardMetrics(): Promise<{
@@ -322,6 +330,39 @@ export class DatabaseStorage implements IStorage {
       pendingPermits: pendingPermitsResult.count,
       criticalActivities,
     };
+  }
+
+  // WBS operations for project management
+  async getWbsItemsByProject(projectId: string): Promise<WbsItem[]> {
+    return await db
+      .select()
+      .from(wbsItems)
+      .where(eq(wbsItems.projectId, projectId))
+      .orderBy(wbsItems.wbsCode);
+  }
+
+  async createWbsItem(item: InsertWbsItem): Promise<WbsItem> {
+    const [newItem] = await db
+      .insert(wbsItems)
+      .values({
+        ...item,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newItem;
+  }
+
+  async updateWbsItem(id: string, item: Partial<InsertWbsItem>): Promise<WbsItem | undefined> {
+    const [updatedItem] = await db
+      .update(wbsItems)
+      .set({
+        ...item,
+        updatedAt: new Date(),
+      })
+      .where(eq(wbsItems.id, id))
+      .returning();
+    return updatedItem;
   }
 }
 

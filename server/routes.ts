@@ -11,6 +11,7 @@ import {
   insertBudgetItemSchema,
   insertDocumentSchema,
   insertCalendarEventSchema,
+  insertWbsItemSchema,
 } from "@shared/schema";
 
 // Configure multer for file uploads
@@ -302,6 +303,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating calendar event:", error);
       res.status(400).json({ message: "Invalid calendar event data" });
+    }
+  });
+
+  // WBS Items for Project Management
+  app.get('/api/wbs/:projectId', isAuthenticated, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const wbsItems = await storage.getWbsItemsByProject(projectId);
+      res.json(wbsItems);
+    } catch (error) {
+      console.error("Error fetching WBS items:", error);
+      res.status(500).json({ message: "Failed to fetch WBS items" });
+    }
+  });
+
+  app.post('/api/wbs', isAuthenticated, async (req, res) => {
+    try {
+      const result = insertWbsItemSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const wbsItem = await storage.createWbsItem(result.data);
+      res.json(wbsItem);
+    } catch (error) {
+      console.error("Error creating WBS item:", error);
+      res.status(500).json({ message: "Failed to create WBS item" });
+    }
+  });
+
+  app.put('/api/wbs/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = insertWbsItemSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const wbsItem = await storage.updateWbsItem(id, result.data);
+      res.json(wbsItem);
+    } catch (error) {
+      console.error("Error updating WBS item:", error);
+      res.status(500).json({ message: "Failed to update WBS item" });
     }
   });
 
