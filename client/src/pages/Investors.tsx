@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, DollarSign, TrendingUp, Users, Plus, Calendar, FileText, PieChart } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ResizableTable, ResizableTableHeader, ResizableTableHead, TableBody, TableCell, TableRow } from "@/components/ui/resizable-table";
+import { Table, TableHeader, TableHead } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 
 interface Investor {
@@ -61,6 +62,7 @@ interface InvestorStatistics {
 
 export default function Investors() {
   const [selectedTab, setSelectedTab] = useState("overview");
+  const [capitalCallsColumnWidths, setCapitalCallsColumnWidths] = useState<number[]>([120, 200, 150, 120, 120, 100, 250]);
   const [showNewInvestorDialog, setShowNewInvestorDialog] = useState(false);
   const [showCapitalCallDialog, setShowCapitalCallDialog] = useState(false);
   const [newInvestor, setNewInvestor] = useState({
@@ -186,6 +188,12 @@ export default function Investors() {
       ...newInvestor,
       investorCode: `INV-${Date.now()}`, // Auto-generated code
     });
+  };
+
+  const handleCapitalCallsColumnResize = (index: number, width: number) => {
+    const newWidths = [...capitalCallsColumnWidths];
+    newWidths[index] = width;
+    setCapitalCallsColumnWidths(newWidths);
   };
 
   const handleCreateCapitalCall = () => {
@@ -625,18 +633,19 @@ export default function Investors() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Call #</TableHead>
-                    <TableHead>Proyecto</TableHead>
-                    <TableHead>Monto</TableHead>
-                    <TableHead>Fecha Call</TableHead>
-                    <TableHead>Vencimiento</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Propósito</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <ResizableTable>
+                <ResizableTableHeader 
+                  onResize={handleCapitalCallsColumnResize}
+                  columnWidths={capitalCallsColumnWidths}
+                >
+                  <ResizableTableHead>Call #</ResizableTableHead>
+                  <ResizableTableHead>Proyecto</ResizableTableHead>
+                  <ResizableTableHead>Monto</ResizableTableHead>
+                  <ResizableTableHead>Fecha Call</ResizableTableHead>
+                  <ResizableTableHead>Vencimiento</ResizableTableHead>
+                  <ResizableTableHead>Estado</ResizableTableHead>
+                  <ResizableTableHead>Propósito</ResizableTableHead>
+                </ResizableTableHeader>
                 <TableBody>
                   {(capitalCalls as CapitalCall[]).map((call: CapitalCall) => (
                     <TableRow 
@@ -656,7 +665,7 @@ export default function Investors() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </ResizableTable>
             </CardContent>
           </Card>
         </TabsContent>

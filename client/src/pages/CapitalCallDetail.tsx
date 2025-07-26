@@ -1,15 +1,19 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ResizableTable, ResizableTableHeader, ResizableTableHead, TableBody, TableCell, TableRow } from "@/components/ui/resizable-table";
+import { Table, TableHeader, TableHead } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, FileText, CheckCircle, Clock, AlertCircle, Download, Send } from "lucide-react";
 
 export default function CapitalCallDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
+  const [itemsColumnWidths, setItemsColumnWidths] = useState<number[]>([80, 60, 300, 250, 120, 100, 80, 150]);
+  const [budgetColumnWidths, setBudgetColumnWidths] = useState<number[]>([280, 180, 180, 200]);
 
   const { data: capitalCall, isLoading } = useQuery({
     queryKey: ['/api/capital-calls', id],
@@ -23,6 +27,18 @@ export default function CapitalCallDetail() {
       currency: 'MXN',
       minimumFractionDigits: 2
     }).format(num);
+  };
+
+  const handleItemsColumnResize = (index: number, width: number) => {
+    const newWidths = [...itemsColumnWidths];
+    newWidths[index] = width;
+    setItemsColumnWidths(newWidths);
+  };
+
+  const handleBudgetColumnResize = (index: number, width: number) => {
+    const newWidths = [...budgetColumnWidths];
+    newWidths[index] = width;
+    setBudgetColumnWidths(newWidths);
   };
 
   const getStatusBadge = (status: string) => {
@@ -154,19 +170,20 @@ export default function CapitalCallDetail() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">Resp.</TableHead>
-                <TableHead className="w-16">#</TableHead>
-                <TableHead>Concepto</TableHead>
-                <TableHead>Proveedor</TableHead>
-                <TableHead className="text-right">Importe</TableHead>
-                <TableHead className="w-24">Fecha</TableHead>
-                <TableHead className="w-20">IVA</TableHead>
-                <TableHead>Notas</TableHead>
-              </TableRow>
-            </TableHeader>
+          <ResizableTable>
+            <ResizableTableHeader 
+              onResize={handleItemsColumnResize}
+              columnWidths={itemsColumnWidths}
+            >
+              <ResizableTableHead>Resp.</ResizableTableHead>
+              <ResizableTableHead>#</ResizableTableHead>
+              <ResizableTableHead>Concepto</ResizableTableHead>
+              <ResizableTableHead>Proveedor</ResizableTableHead>
+              <ResizableTableHead className="text-right">Importe</ResizableTableHead>
+              <ResizableTableHead>Fecha</ResizableTableHead>
+              <ResizableTableHead>IVA</ResizableTableHead>
+              <ResizableTableHead>Notas</ResizableTableHead>
+            </ResizableTableHeader>
             <TableBody>
               {call.items?.map((item: any, index: number) => (
                 <TableRow key={index}>
@@ -189,7 +206,7 @@ export default function CapitalCallDetail() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ResizableTable>
         </CardContent>
       </Card>
 
@@ -242,15 +259,16 @@ export default function CapitalCallDetail() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Partida</TableHead>
-                <TableHead className="text-right">Acumulado anterior [A]</TableHead>
-                <TableHead className="text-right">Este capital call [B]</TableHead>
-                <TableHead className="text-right">Acumulado actual [C = A + B]</TableHead>
-              </TableRow>
-            </TableHeader>
+          <ResizableTable>
+            <ResizableTableHeader
+              onResize={handleBudgetColumnResize}
+              columnWidths={budgetColumnWidths}
+            >
+              <ResizableTableHead>Partida</ResizableTableHead>
+              <ResizableTableHead className="text-right">Acumulado anterior [A]</ResizableTableHead>
+              <ResizableTableHead className="text-right">Este capital call [B]</ResizableTableHead>
+              <ResizableTableHead className="text-right">Acumulado actual [C = A + B]</ResizableTableHead>
+            </ResizableTableHeader>
             <TableBody>
               {call.budgetExecution?.map((budget: any, index: number) => (
                 <TableRow key={index}>
@@ -287,7 +305,7 @@ export default function CapitalCallDetail() {
                 </TableCell>
               </TableRow>
             </TableBody>
-          </Table>
+          </ResizableTable>
           <div className="mt-4 p-4 bg-muted rounded-lg">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
