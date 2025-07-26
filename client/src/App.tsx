@@ -14,6 +14,7 @@ import Calendar from "@/pages/Calendar";
 import Documents from "@/pages/Documents";
 import Users from "@/pages/Users";
 import ProjectManagement from "@/pages/ProjectManagement";
+import Commercial from "@/pages/Commercial";
 import Layout from "@/components/Layout";
 
 function Router() {
@@ -33,6 +34,7 @@ function Router() {
           <Route path="/documents" component={Documents} />
           <Route path="/users" component={Users} />
           <Route path="/project-management" component={ProjectManagement} />
+          <Route path="/commercial" component={Commercial} />
         </Layout>
       )}
       <Route component={NotFound} />

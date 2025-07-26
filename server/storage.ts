@@ -7,6 +7,9 @@ import {
   documents,
   calendarEvents,
   wbsItems,
+  lots,
+  clients,
+  salesContracts,
   type User,
   type UpsertUser,
   type Project,
@@ -23,6 +26,12 @@ import {
   type InsertCalendarEvent,
   type WbsItem,
   type InsertWbsItem,
+  type Lot,
+  type InsertLot,
+  type Client,
+  type InsertClient,
+  type SalesContract,
+  type InsertSalesContract,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql } from "drizzle-orm";
@@ -68,6 +77,14 @@ export interface IStorage {
   getWbsItemsByProject(projectId: string): Promise<WbsItem[]>;
   createWbsItem(item: InsertWbsItem): Promise<WbsItem>;
   updateWbsItem(id: string, item: Partial<InsertWbsItem>): Promise<WbsItem | undefined>;
+
+  // Commercial management operations
+  getLotsByProject(projectId: string): Promise<Lot[]>;
+  createLot(lot: InsertLot): Promise<Lot>;
+  getClients(): Promise<Client[]>;
+  createClient(client: InsertClient): Promise<Client>;
+  getSalesContractsByProject(projectId: string): Promise<SalesContract[]>;
+  createSalesContract(contract: InsertSalesContract): Promise<SalesContract>;
   
   // Dashboard metrics
   getDashboardMetrics(): Promise<{
@@ -363,6 +380,66 @@ export class DatabaseStorage implements IStorage {
       .where(eq(wbsItems.id, id))
       .returning();
     return updatedItem;
+  }
+
+  // Commercial management operations
+  async getLotsByProject(projectId: string): Promise<Lot[]> {
+    return await db
+      .select()
+      .from(lots)
+      .where(eq(lots.projectId, projectId))
+      .orderBy(lots.number);
+  }
+
+  async createLot(lot: InsertLot): Promise<Lot> {
+    const [newLot] = await db
+      .insert(lots)
+      .values({
+        ...lot,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newLot;
+  }
+
+  async getClients(): Promise<Client[]> {
+    return await db
+      .select()
+      .from(clients)
+      .orderBy(clients.lastName, clients.firstName);
+  }
+
+  async createClient(client: InsertClient): Promise<Client> {
+    const [newClient] = await db
+      .insert(clients)
+      .values({
+        ...client,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newClient;
+  }
+
+  async getSalesContractsByProject(projectId: string): Promise<SalesContract[]> {
+    return await db
+      .select()
+      .from(salesContracts)
+      .where(eq(salesContracts.projectId, projectId))
+      .orderBy(salesContracts.createdAt);
+  }
+
+  async createSalesContract(contract: InsertSalesContract): Promise<SalesContract> {
+    const [newContract] = await db
+      .insert(salesContracts)
+      .values({
+        ...contract,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newContract;
   }
 }
 

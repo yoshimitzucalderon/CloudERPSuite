@@ -12,6 +12,9 @@ import {
   insertDocumentSchema,
   insertCalendarEventSchema,
   insertWbsItemSchema,
+  insertLotSchema,
+  insertClientSchema,
+  insertSalesContractSchema,
 } from "@shared/schema";
 
 // Configure multer for file uploads
@@ -346,6 +349,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating WBS item:", error);
       res.status(500).json({ message: "Failed to update WBS item" });
+    }
+  });
+
+  // Commercial Management Routes - Lots
+  app.get('/api/lots/:projectId', isAuthenticated, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const lots = await storage.getLotsByProject(projectId);
+      res.json(lots);
+    } catch (error) {
+      console.error("Error fetching lots:", error);
+      res.status(500).json({ message: "Failed to fetch lots" });
+    }
+  });
+
+  app.post('/api/lots', isAuthenticated, async (req, res) => {
+    try {
+      const result = insertLotSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const lot = await storage.createLot(result.data);
+      res.json(lot);
+    } catch (error) {
+      console.error("Error creating lot:", error);
+      res.status(500).json({ message: "Failed to create lot" });
+    }
+  });
+
+  // Commercial Management Routes - Clients
+  app.get('/api/clients', isAuthenticated, async (req, res) => {
+    try {
+      const clients = await storage.getClients();
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      res.status(500).json({ message: "Failed to fetch clients" });
+    }
+  });
+
+  app.post('/api/clients', isAuthenticated, async (req, res) => {
+    try {
+      const result = insertClientSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const client = await storage.createClient(result.data);
+      res.json(client);
+    } catch (error) {
+      console.error("Error creating client:", error);
+      res.status(500).json({ message: "Failed to create client" });
+    }
+  });
+
+  // Commercial Management Routes - Sales Contracts
+  app.get('/api/contracts/:projectId', isAuthenticated, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const contracts = await storage.getSalesContractsByProject(projectId);
+      res.json(contracts);
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+      res.status(500).json({ message: "Failed to fetch contracts" });
+    }
+  });
+
+  app.post('/api/contracts', isAuthenticated, async (req, res) => {
+    try {
+      const result = insertSalesContractSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      
+      const contract = await storage.createSalesContract(result.data);
+      res.json(contract);
+    } catch (error) {
+      console.error("Error creating contract:", error);
+      res.status(500).json({ message: "Failed to create contract" });
     }
   });
 

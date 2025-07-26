@@ -127,6 +127,110 @@ export async function createDemoProject() {
         ]);
       }
 
+      // Create demo WBS items for project management
+      await storage.createWbsItem({
+        projectId: project.id,
+        parentId: "",
+        wbsCode: "01.001",
+        name: "Planeación y Diseño",
+        description: "Fase inicial de planeación arquitectónica y diseño del proyecto",
+        level: 1,
+        duration: 90,
+        progress: 80,
+        budgetedCost: "150000000",
+        actualCost: "120000000",
+        isMilestone: true,
+        isCritical: true,
+        assignedTo: "",
+      });
+
+      await storage.createWbsItem({
+        projectId: project.id,
+        parentId: "",
+        wbsCode: "02.001",
+        name: "Licencias y Permisos",
+        description: "Obtención de licencias de construcción y permisos municipales",
+        level: 1,
+        duration: 120,
+        progress: 60,
+        budgetedCost: "80000000",
+        actualCost: "70000000",
+        isMilestone: true,
+        isCritical: true,
+        assignedTo: "",
+      });
+
+      await storage.createWbsItem({
+        projectId: project.id,
+        parentId: "",
+        wbsCode: "03.001",
+        name: "Movimiento de Tierra",
+        description: "Excavación, nivelación y preparación del terreno",
+        level: 2,
+        duration: 45,
+        progress: 0,
+        budgetedCost: "200000000",
+        actualCost: "0",
+        isMilestone: false,
+        isCritical: true,
+        assignedTo: "",
+      });
+
+      // Create demo lots for commercial management
+      const lots = [
+        { number: "A-101", area: 120, price: "180000000", location: "Torre A - Piso 1" },
+        { number: "A-102", area: 95, price: "150000000", location: "Torre A - Piso 1" },
+        { number: "A-201", area: 110, price: "165000000", location: "Torre A - Piso 2" },
+        { number: "B-101", area: 130, price: "195000000", location: "Torre B - Piso 1" },
+        { number: "B-102", area: 98, price: "147000000", location: "Torre B - Piso 1" },
+      ];
+
+      for (const lotData of lots) {
+        await storage.createLot({
+          projectId: project.id,
+          number: lotData.number,
+          area: lotData.area,
+          price: lotData.price,
+          status: "disponible",
+          location: lotData.location,
+        });
+      }
+
+      // Create demo clients
+      const clients = [
+        {
+          firstName: "Ana María",
+          lastName: "González Rodríguez",
+          email: "ana.gonzalez@email.com",
+          phone: "+57 300 123 4567",
+          identificationType: "cedula",
+          identificationNumber: "52123456",
+          address: "Calle 85 #12-34, Bogotá",
+        },
+        {
+          firstName: "Carlos Eduardo",
+          lastName: "Martínez López",
+          email: "carlos.martinez@email.com",
+          phone: "+57 310 987 6543",
+          identificationType: "cedula",
+          identificationNumber: "80987654",
+          address: "Carrera 15 #45-67, Bogotá",
+        },
+        {
+          firstName: "Lucia",
+          lastName: "Fernández Silva",
+          email: "lucia.fernandez@email.com",
+          phone: "+57 320 456 7890",
+          identificationType: "cedula",
+          identificationNumber: "41456789",
+          address: "Avenida 68 #23-45, Bogotá",
+        },
+      ];
+
+      for (const clientData of clients) {
+        await storage.createClient(clientData);
+      }
+
       console.log("Demo project created successfully");
     }
   } catch (error) {

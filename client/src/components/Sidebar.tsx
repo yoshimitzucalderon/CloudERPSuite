@@ -10,13 +10,15 @@ import {
   FolderOpen, 
   Users, 
   Settings,
-  BarChart
+  BarChart,
+  ShoppingCart
 } from "lucide-react";
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: BarChart3 },
   { name: 'Proyectos', href: '/projects', icon: Building2 },
   { name: 'Gestión de Proyectos', href: '/project-management', icon: BarChart },
+  { name: 'Gestión Comercial', href: '/commercial', icon: ShoppingCart },
   { name: 'Trámites y Permisos', href: '/permits', icon: FileText },
   { name: 'Control Presupuestal', href: '/budget', icon: Calculator },
   { name: 'Calendario', href: '/calendar', icon: Calendar },
