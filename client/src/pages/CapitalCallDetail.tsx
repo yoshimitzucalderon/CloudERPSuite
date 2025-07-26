@@ -95,39 +95,52 @@ export default function CapitalCallDetail() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setLocation("/investors")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Capital Call #{call.callNumber}</h1>
-            <p className="text-muted-foreground">
-              {call.purpose}
-            </p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setLocation("/investors")}
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold truncate">Capital Call #{call.callNumber}</h1>
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {call.purpose}
+              </p>
+            </div>
           </div>
         </div>
-        <div className="flex space-x-2">
+        
+        {/* Action buttons - responsive layout */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <Button 
             variant="outline" 
-            size="sm"
+            className="flex-1 sm:flex-none justify-center sm:justify-start py-3 sm:py-2"
             onClick={() => setLocation(`/investors/capital-call/${id}/approve`)}
           >
             <CheckCircle className="h-4 w-4 mr-2" />
-            Proceso de Autorización
+            <span className="hidden sm:inline">Proceso de Autorización</span>
+            <span className="sm:hidden">Autorizar</span>
           </Button>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            className="flex-1 sm:flex-none justify-center sm:justify-start py-3 sm:py-2"
+          >
             <Download className="h-4 w-4 mr-2" />
-            Descargar PDF
+            <span className="hidden sm:inline">Descargar PDF</span>
+            <span className="sm:hidden">PDF</span>
           </Button>
-          <Button size="sm">
+          <Button 
+            className="flex-1 sm:flex-none justify-center sm:justify-start py-3 sm:py-2"
+          >
             <Send className="h-4 w-4 mr-2" />
-            Enviar a Inversores
+            <span className="hidden sm:inline">Enviar a Inversores</span>
+            <span className="sm:hidden">Enviar</span>
           </Button>
         </div>
       </div>

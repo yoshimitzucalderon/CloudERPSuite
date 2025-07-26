@@ -204,26 +204,29 @@ export default function CapitalCallApproval() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setLocation("/investors")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Autorización - Capital Call #{call.callNumber}</h1>
-            <p className="text-muted-foreground">
-              {call.purpose}
-            </p>
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setLocation("/investors")}
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold truncate">Autorización - Capital Call #{call.callNumber}</h1>
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {call.purpose}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold">{formatCurrency(call.totalAmount)}</div>
-          <div className="text-sm text-muted-foreground">Monto total</div>
+          <div className="text-left sm:text-right">
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(call.totalAmount)}</div>
+            <div className="text-sm text-muted-foreground">Monto total</div>
+          </div>
         </div>
       </div>
 
@@ -386,11 +389,11 @@ export default function CapitalCallApproval() {
                   <li>• <strong>Rechazar:</strong> El proceso se detendrá y requerirá revisión</li>
                 </ul>
               </div>
-              <div className="flex space-x-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4 sm:gap-0">
                 <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
                   <DialogTrigger asChild>
-                    <Button className="bg-green-600 hover:bg-green-700">
-                      <CheckCircle className="h-4 w-4 mr-2" />
+                    <Button className="bg-green-600 hover:bg-green-700 py-3 text-base font-medium">
+                      <CheckCircle className="h-5 w-5 mr-2" />
                       Aprobar Capital Call
                     </Button>
                   </DialogTrigger>
@@ -432,8 +435,8 @@ export default function CapitalCallApproval() {
 
                 <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
                   <DialogTrigger asChild>
-                    <Button variant="destructive">
-                      <AlertCircle className="h-4 w-4 mr-2" />
+                    <Button variant="destructive" className="py-3 text-base font-medium">
+                      <AlertCircle className="h-5 w-5 mr-2" />
                       Rechazar Capital Call
                     </Button>
                   </DialogTrigger>
@@ -474,8 +477,12 @@ export default function CapitalCallApproval() {
                   </DialogContent>
                 </Dialog>
 
-                <Button variant="outline" onClick={() => setLocation(`/investors/capital-call/${id}`)}>
-                  <FileText className="h-4 w-4 mr-2" />
+                <Button 
+                  variant="outline" 
+                  onClick={() => setLocation(`/investors/capital-call/${id}`)}
+                  className="py-3 text-base font-medium"
+                >
+                  <FileText className="h-5 w-5 mr-2" />
                   Ver Detalle Completo
                 </Button>
               </div>
@@ -528,7 +535,10 @@ export default function CapitalCallApproval() {
                     </div>
                     <Dialog open={showReverseDialog} onOpenChange={setShowReverseDialog}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-orange-600 border-orange-300 hover:bg-orange-50">
+                        <Button 
+                          variant="outline" 
+                          className="text-orange-600 border-orange-300 hover:bg-orange-50 py-2 px-4 text-sm font-medium"
+                        >
                           <AlertCircle className="h-4 w-4 mr-2" />
                           Revertir Aprobación
                         </Button>
