@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { Logo } from "./Logo";
 import { 
   Building2, 
   BarChart3, 
@@ -38,10 +39,8 @@ export function Sidebar() {
         {/* Logo Header */}
         <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">ERP Inmobiliario</h1>
+            <Logo className="h-8 w-auto" />
+            <span className="text-sm font-medium text-gray-700">ERP Inmobiliario</span>
           </div>
         </div>
 
