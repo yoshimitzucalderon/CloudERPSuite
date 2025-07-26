@@ -24,6 +24,12 @@ export default function CapitalCallApproval() {
 
   const { data: capitalCall, isLoading } = useQuery({
     queryKey: ['/api/capital-calls', id],
+    queryFn: () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const scenario = urlParams.get('scenario');
+      const queryString = scenario ? `?scenario=${scenario}` : '';
+      return fetch(`/api/capital-calls/${id}${queryString}`).then(res => res.json());
+    },
     retry: false,
   });
 
@@ -99,17 +105,11 @@ export default function CapitalCallApproval() {
     const call = capitalCall as any;
     const user = currentUser as any;
     
-    // Debug: log the user data and authorizations
-    console.log('Current user:', user);
-    console.log('Authorizations:', call.authorizations);
-    
     return call.authorizations?.find((auth: any) => {
       const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-      const matches = auth.userName === fullName || 
-                     auth.userName.includes(user.firstName || '') ||
-                     auth.userName === "Yoshimitsu Calderón"; // Direct match for testing
-      console.log(`Checking ${auth.userName} against ${fullName}:`, matches);
-      return matches;
+      return auth.userName === fullName || 
+             auth.userName.includes(user.firstName || '') ||
+             auth.userName === "Yoshimitsu Calderón"; // Direct match for testing
     });
   };
 
