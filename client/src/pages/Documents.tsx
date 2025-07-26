@@ -51,18 +51,18 @@ export default function Documents() {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
-    category: '',
-    status: '',
-    project: ''
+    category: 'all',
+    status: 'all',
+    project: 'all'
   });
 
   // Fetch documents
-  const { data: documents, isLoading: documentsLoading } = useQuery({
+  const { data: documents = [], isLoading: documentsLoading } = useQuery({
     queryKey: ['/api/documents', filters],
   });
 
   // Fetch document templates
-  const { data: templates, isLoading: templatesLoading } = useQuery({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ['/api/document-templates'],
   });
 
@@ -223,7 +223,7 @@ export default function Documents() {
                   <SelectValue placeholder="Categoría" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="contrato">Contratos</SelectItem>
                   <SelectItem value="plano">Planos</SelectItem>
                   <SelectItem value="permiso">Permisos</SelectItem>
@@ -241,7 +241,7 @@ export default function Documents() {
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="borrador">Borrador</SelectItem>
                   <SelectItem value="revision">En Revisión</SelectItem>
                   <SelectItem value="aprobado">Aprobado</SelectItem>
@@ -269,7 +269,7 @@ export default function Documents() {
         {/* Document Library */}
         <TabsContent value="library" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(documents as any[])?.map((doc) => (
+            {Array.isArray(documents) && documents.map((doc) => (
               <Card key={doc.id} className="hover:shadow-md transition-shadow cursor-pointer" 
                     onClick={() => setSelectedDocument(doc)}>
                 <CardHeader className="pb-3">
@@ -358,7 +358,7 @@ export default function Documents() {
             ))}
           </div>
 
-          {(!documents || documents.length === 0) && (
+          {(!Array.isArray(documents) || documents.length === 0) && (
             <Card>
               <CardContent className="p-8 text-center">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -425,7 +425,7 @@ export default function Documents() {
         {/* Document Templates */}
         <TabsContent value="templates" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(templates as any[])?.map((template) => (
+            {Array.isArray(templates) && templates.map((template) => (
               <Card key={template.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -441,7 +441,7 @@ export default function Documents() {
                 <CardContent className="pt-0">
                   <div className="space-y-3">
                     <div className="text-sm text-muted-foreground">
-                      {template.fields?.length || 0} campos configurables
+                      {Array.isArray(template.fields) ? template.fields.length : 0} campos configurables
                     </div>
                     
                     <div className="flex space-x-2">
@@ -460,7 +460,7 @@ export default function Documents() {
             ))}
           </div>
 
-          {(!templates || templates.length === 0) && (
+          {(!Array.isArray(templates) || templates.length === 0) && (
             <Card>
               <CardContent className="p-8 text-center">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -553,8 +553,8 @@ function DocumentUploadForm({ onSubmit, isLoading, projects }: any) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: '',
-    projectId: '',
+    category: 'contrato',
+    projectId: 'none',
     tags: [],
     file: null as File | null
   });
@@ -633,7 +633,8 @@ function DocumentUploadForm({ onSubmit, isLoading, projects }: any) {
               <SelectValue placeholder="Seleccionar proyecto" />
             </SelectTrigger>
             <SelectContent>
-              {projects?.map((project: any) => (
+              <SelectItem value="none">Sin proyecto</SelectItem>
+              {Array.isArray(projects) && projects.map((project: any) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.name}
                 </SelectItem>
