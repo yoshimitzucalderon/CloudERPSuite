@@ -1761,6 +1761,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           authorizations = authorizationScenarios.pendingApproval.authorizations;
       }
       
+      // Import approval store
+      const { approvalStore } = await import('./approvalStore');
+      
       // Mock detailed capital call - normally would fetch from database
       const mockDetailedCapitalCall = {
         id: "cc-1",
@@ -1794,6 +1797,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       if (id === "cc-1") {
+        // Apply stored approvals to update the authorization states
+        const storedApprovals = approvalStore.getApprovals(id);
+        
+        // Update authorization states based on stored approvals
+        mockDetailedCapitalCall.authorizations = mockDetailedCapitalCall.authorizations.map(auth => {
+          const userApproval = storedApprovals.find(sa => 
+            sa.userName === auth.userName || 
+            sa.userName === "Yoshimitsu Calderón" && auth.userName === "Yoshimitsu Calderón"
+          );
+          
+          if (userApproval) {
+            return {
+              ...auth,
+              status: userApproval.action === 'approve' ? 'firmado' : 
+                     userApproval.action === 'reject' ? 'rechazado' : 
+                     'pendiente', // reverse goes back to pending
+              signedAt: userApproval.action !== 'reverse' ? userApproval.timestamp : null,
+              comments: userApproval.comments
+            };
+          }
+          
+          return auth;
+        });
+        
         res.json(mockDetailedCapitalCall);
       } else {
         res.status(404).json({ message: "Capital call not found" });
@@ -1815,21 +1842,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid action" });
       }
       
-      // Mock approval logic - in real implementation, update database
-      const approvalResult = {
+      // Import approval store
+      const { approvalStore } = await import('./approvalStore');
+      
+      // Store the approval
+      const approval = {
         capitalCallId: id,
         userId: user.claims.sub,
-        userName: `${user.claims.first_name || ''} ${user.claims.last_name || ''}`.trim(),
+        userName: `${user.claims.first_name || ''} ${user.claims.last_name || ''}`.trim() || "Yoshimitsu Calderón",
         action,
         comments,
-        timestamp: new Date(),
+        timestamp: new Date()
+      };
+      
+      approvalStore.addApproval(approval);
+      
+      const approvalResult = {
+        ...approval,
         success: true
       };
       
-      // Simular lógica de reversión
-      if (action === 'reverse') {
-        approvalResult.success = true; // En implementación real, validar que no hay aprobaciones posteriores
-      }
+      console.log(`[Approval] User ${approval.userName} performed ${action} on capital call ${id}`);
       
       res.json(approvalResult);
     } catch (error) {
