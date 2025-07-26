@@ -365,34 +365,7 @@ export const workflowNotifications = pgTable("workflow_notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Investors table for capital management
-export const investors = pgTable("investors", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  email: varchar("email"),
-  phone: varchar("phone"),
-  investorType: varchar("investor_type").default('individual'),
-  taxId: varchar("tax_id"),
-  totalCommitment: varchar("total_commitment").default('0'),
-  totalContributed: varchar("total_contributed").default('0'),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
-// Capital calls table
-export const capitalCalls = pgTable("capital_calls", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull().references(() => projects.id),
-  callNumber: integer("call_number").notNull(),
-  totalAmount: varchar("total_amount").notNull(),
-  callDate: timestamp("call_date").notNull(),
-  dueDate: timestamp("due_date").notNull(),
-  purpose: text("purpose"),
-  status: varchar("status").default('pendiente'),
-  createdBy: varchar("created_by").notNull().references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
 // Escalation Records - Registro de escalamientos
 export const escalationRecords = pgTable("escalation_records", {
@@ -547,16 +520,7 @@ export const authorizationStepsRelations = relations(authorizationSteps, ({ one 
   }),
 }));
 
-export const capitalCallsRelations = relations(capitalCalls, ({ one }) => ({
-  project: one(projects, {
-    fields: [capitalCalls.projectId],
-    references: [projects.id],
-  }),
-  createdBy: one(users, {
-    fields: [capitalCalls.createdBy],
-    references: [users.id],
-  }),
-}));
+
 
 export const workflowStepsRelations = relations(workflowSteps, ({ one }) => ({
   workflow: one(authorizationWorkflows, {
@@ -666,17 +630,7 @@ export const insertAuthorizationStepSchema = createInsertSchema(authorizationSte
   timestamp: true,
 });
 
-export const insertInvestorSchema = createInsertSchema(investors).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
 
-export const insertCapitalCallSchema = createInsertSchema(capitalCalls).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
 
 export const insertAuthorizationMatrixSchema = createInsertSchema(authorizationMatrix).omit({
   id: true,
@@ -1004,10 +958,7 @@ export type InsertAuthorizationWorkflow = z.infer<typeof insertAuthorizationWork
 export type AuthorizationWorkflow = typeof authorizationWorkflows.$inferSelect;
 export type InsertAuthorizationStep = z.infer<typeof insertAuthorizationStepSchema>;
 export type AuthorizationStep = typeof authorizationSteps.$inferSelect;
-export type InsertInvestor = z.infer<typeof insertInvestorSchema>;
-export type Investor = typeof investors.$inferSelect;
-export type InsertCapitalCall = z.infer<typeof insertCapitalCallSchema>;
-export type CapitalCall = typeof capitalCalls.$inferSelect;
+
 export type InsertAuthorizationMatrix = z.infer<typeof insertAuthorizationMatrixSchema>;
 export type AuthorizationMatrix = typeof authorizationMatrix.$inferSelect;
 export type InsertWorkflowStep = z.infer<typeof insertWorkflowStepSchema>;
@@ -1018,6 +969,240 @@ export type InsertWorkflowNotification = z.infer<typeof insertWorkflowNotificati
 export type WorkflowNotification = typeof workflowNotifications.$inferSelect;
 export type InsertEscalationRecord = z.infer<typeof insertEscalationRecordSchema>;
 export type EscalationRecord = typeof escalationRecords.$inferSelect;
+
+// Investor status enum
+export const investorStatusEnum = pgEnum('investor_status', [
+  'activo', 'inactivo', 'suspendido', 'retirado'
+]);
+
+// Capital call status enum
+export const capitalCallStatusEnum = pgEnum('capital_call_status', [
+  'programado', 'enviado', 'pagado_parcial', 'pagado_completo', 'vencido'
+]);
+
+// Distribution type enum
+export const distributionTypeEnum = pgEnum('distribution_type', [
+  'dividendos', 'retorno_capital', 'ganancia_capital', 'interes'
+]);
+
+// Investors table
+export const investors = pgTable("investors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investorCode: varchar("investor_code").notNull().unique(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email").notNull().unique(),
+  phone: varchar("phone"),
+  taxId: varchar("tax_id"), // RFC or tax identification number
+  address: text("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  zipCode: varchar("zip_code"),
+  country: varchar("country").default('Mexico'),
+  investorType: varchar("investor_type").notNull().default('individual'), // 'individual', 'corporate', 'fund'
+  riskProfile: varchar("risk_profile").default('moderado'), // 'conservador', 'moderado', 'agresivo'
+  status: investorStatusEnum("status").notNull().default('activo'),
+  totalInvested: decimal("total_invested", { precision: 15, scale: 2 }).default('0'),
+  totalReturns: decimal("total_returns", { precision: 15, scale: 2 }).default('0'),
+  currentROI: real("current_roi").default(0), // calculated percentage
+  joinDate: timestamp("join_date").defaultNow(),
+  lastActivityDate: timestamp("last_activity_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investor project participations
+export const investorParticipations = pgTable("investor_participations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investorId: varchar("investor_id").notNull().references(() => investors.id, { onDelete: 'cascade' }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  participationPercentage: real("participation_percentage").notNull(), // percentage of project ownership
+  investmentAmount: decimal("investment_amount", { precision: 15, scale: 2 }).notNull(),
+  paidAmount: decimal("paid_amount", { precision: 15, scale: 2 }).default('0'),
+  pendingAmount: decimal("pending_amount", { precision: 15, scale: 2 }).default('0'),
+  expectedReturn: decimal("expected_return", { precision: 15, scale: 2 }),
+  actualReturn: decimal("actual_return", { precision: 15, scale: 2 }).default('0'),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Capital calls table
+export const capitalCalls = pgTable("capital_calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  callNumber: varchar("call_number").notNull().unique(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  purpose: text("purpose").notNull(), // reason for the capital call
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  sentDate: timestamp("sent_date"),
+  status: capitalCallStatusEnum("status").notNull().default('programado'),
+  paidAmount: decimal("paid_amount", { precision: 15, scale: 2 }).default('0'),
+  pendingAmount: decimal("pending_amount", { precision: 15, scale: 2 }).default('0'),
+  instructions: text("instructions"), // payment instructions
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Individual capital call notices to investors
+export const capitalCallNotices = pgTable("capital_call_notices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  capitalCallId: varchar("capital_call_id").notNull().references(() => capitalCalls.id, { onDelete: 'cascade' }),
+  investorId: varchar("investor_id").notNull().references(() => investors.id, { onDelete: 'cascade' }),
+  amountDue: decimal("amount_due", { precision: 15, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 15, scale: 2 }).default('0'),
+  paymentStatus: varchar("payment_status").notNull().default('pendiente'), // 'pendiente', 'pagado_parcial', 'pagado_completo', 'vencido'
+  sentDate: timestamp("sent_date"),
+  paidDate: timestamp("paid_date"),
+  paymentReference: varchar("payment_reference"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investor distributions table
+export const investorDistributions = pgTable("investor_distributions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  distributionCode: varchar("distribution_code").notNull().unique(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  investorId: varchar("investor_id").notNull().references(() => investors.id, { onDelete: 'cascade' }),
+  distributionType: distributionTypeEnum("distribution_type").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  distributionDate: timestamp("distribution_date").notNull(),
+  paymentDate: timestamp("payment_date"),
+  paymentMethod: varchar("payment_method"), // 'transfer', 'check', 'wire'
+  paymentReference: varchar("payment_reference"),
+  taxWithholding: decimal("tax_withholding", { precision: 15, scale: 2 }).default('0'),
+  netAmount: decimal("net_amount", { precision: 15, scale: 2 }).notNull(),
+  description: text("description"),
+  isPaid: boolean("is_paid").default(false),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ROI reports table
+export const roiReports = pgTable("roi_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reportCode: varchar("report_code").notNull().unique(),
+  investorId: varchar("investor_id").notNull().references(() => investors.id, { onDelete: 'cascade' }),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: 'cascade' }),
+  reportPeriod: varchar("report_period").notNull(), // 'Q1 2024', 'Annual 2024', etc.
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  initialInvestment: decimal("initial_investment", { precision: 15, scale: 2 }).notNull(),
+  additionalInvestments: decimal("additional_investments", { precision: 15, scale: 2 }).default('0'),
+  totalInvestment: decimal("total_investment", { precision: 15, scale: 2 }).notNull(),
+  distributions: decimal("distributions", { precision: 15, scale: 2 }).default('0'),
+  currentValue: decimal("current_value", { precision: 15, scale: 2 }).notNull(),
+  netReturn: decimal("net_return", { precision: 15, scale: 2 }).notNull(),
+  roiPercentage: real("roi_percentage").notNull(),
+  annualizedReturn: real("annualized_return").notNull(),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  generatedBy: varchar("generated_by").references(() => users.id),
+  notes: text("notes"),
+});
+
+// Relations for investors
+export const investorRelations = relations(investors, ({ many }) => ({
+  participations: many(investorParticipations),
+  capitalCallNotices: many(capitalCallNotices),
+  distributions: many(investorDistributions),
+  roiReports: many(roiReports),
+}));
+
+export const investorParticipationRelations = relations(investorParticipations, ({ one }) => ({
+  investor: one(investors, {
+    fields: [investorParticipations.investorId],
+    references: [investors.id],
+  }),
+  project: one(projects, {
+    fields: [investorParticipations.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const capitalCallRelations = relations(capitalCalls, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [capitalCalls.projectId],
+    references: [projects.id],
+  }),
+  createdByUser: one(users, {
+    fields: [capitalCalls.createdBy],
+    references: [users.id],
+  }),
+  notices: many(capitalCallNotices),
+}));
+
+export const capitalCallNoticeRelations = relations(capitalCallNotices, ({ one }) => ({
+  capitalCall: one(capitalCalls, {
+    fields: [capitalCallNotices.capitalCallId],
+    references: [capitalCalls.id],
+  }),
+  investor: one(investors, {
+    fields: [capitalCallNotices.investorId],
+    references: [investors.id],
+  }),
+}));
+
+export const investorDistributionRelations = relations(investorDistributions, ({ one }) => ({
+  project: one(projects, {
+    fields: [investorDistributions.projectId],
+    references: [projects.id],
+  }),
+  investor: one(investors, {
+    fields: [investorDistributions.investorId],
+    references: [investors.id],
+  }),
+  createdByUser: one(users, {
+    fields: [investorDistributions.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const roiReportRelations = relations(roiReports, ({ one }) => ({
+  investor: one(investors, {
+    fields: [roiReports.investorId],
+    references: [investors.id],
+  }),
+  project: one(projects, {
+    fields: [roiReports.projectId],
+    references: [projects.id],
+  }),
+  generatedByUser: one(users, {
+    fields: [roiReports.generatedBy],
+    references: [users.id],
+  }),
+}));
+
+// Export investor types
+export type Investor = typeof investors.$inferSelect;
+export type InvestorParticipation = typeof investorParticipations.$inferSelect;
+export type CapitalCall = typeof capitalCalls.$inferSelect;
+export type CapitalCallNotice = typeof capitalCallNotices.$inferSelect;
+export type InvestorDistribution = typeof investorDistributions.$inferSelect;
+export type RoiReport = typeof roiReports.$inferSelect;
+
+// Insert schemas for investors
+export const insertInvestorSchema = createInsertSchema(investors).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertInvestorParticipationSchema = createInsertSchema(investorParticipations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCapitalCallSchema = createInsertSchema(capitalCalls).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCapitalCallNoticeSchema = createInsertSchema(capitalCallNotices).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertInvestorDistributionSchema = createInsertSchema(investorDistributions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertRoiReportSchema = createInsertSchema(roiReports).omit({ id: true, generatedAt: true });
+
+// Insert types for investors
+export type InsertInvestor = z.infer<typeof insertInvestorSchema>;
+export type InsertInvestorParticipation = z.infer<typeof insertInvestorParticipationSchema>;
+export type InsertCapitalCall = z.infer<typeof insertCapitalCallSchema>;
+export type InsertCapitalCallNotice = z.infer<typeof insertCapitalCallNoticeSchema>;
+export type InsertInvestorDistribution = z.infer<typeof insertInvestorDistributionSchema>;
+export type InsertRoiReport = z.infer<typeof insertRoiReportSchema>;
 
 // Project Management and Critical Path Tables
 export const projectTasks = pgTable("project_tasks", {

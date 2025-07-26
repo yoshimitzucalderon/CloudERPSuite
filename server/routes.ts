@@ -515,62 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Investor Routes
-  app.get('/api/investors', isAuthenticated, async (req, res) => {
-    try {
-      const investors = await storage.getInvestors();
-      res.json(investors);
-    } catch (error) {
-      console.error("Error fetching investors:", error);
-      res.status(500).json({ message: "Failed to fetch investors" });
-    }
-  });
 
-  app.post('/api/investors', isAuthenticated, async (req, res) => {
-    try {
-      const result = insertInvestorSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
-      }
-      
-      const investor = await storage.createInvestor(result.data);
-      res.json(investor);
-    } catch (error) {
-      console.error("Error creating investor:", error);
-      res.status(500).json({ message: "Failed to create investor" });
-    }
-  });
-
-  // Capital Call Routes
-  app.get('/api/capital-calls/:projectId', isAuthenticated, async (req, res) => {
-    try {
-      const { projectId } = req.params;
-      const capitalCalls = await storage.getCapitalCalls(projectId);
-      res.json(capitalCalls);
-    } catch (error) {
-      console.error("Error fetching capital calls:", error);
-      res.status(500).json({ message: "Failed to fetch capital calls" });
-    }
-  });
-
-  app.post('/api/capital-calls', isAuthenticated, async (req: any, res) => {
-    try {
-      const capitalCallData = {
-        ...req.body,
-        createdBy: req.user.claims.sub,
-      };
-      const result = insertCapitalCallSchema.safeParse(capitalCallData);
-      if (!result.success) {
-        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
-      }
-      
-      const capitalCall = await storage.createCapitalCall(result.data);
-      res.json(capitalCall);
-    } catch (error) {
-      console.error("Error creating capital call:", error);
-      res.status(500).json({ message: "Failed to create capital call" });
-    }
-  });
 
   // Advanced Authorization System Routes
 
@@ -1668,6 +1613,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Error al validar archivo de Microsoft Project',
         error: error instanceof Error ? error.message : 'Error desconocido'
       });
+    }
+  });
+
+  // Mock API routes for Investor Management (temporary implementation)
+  app.get('/api/investor-statistics', isAuthenticated, async (req, res) => {
+    try {
+      const mockStats = {
+        totalInvestors: 12,
+        activeInvestors: 10,
+        totalCommitments: "25000000",
+        totalContributions: "18750000", 
+        pendingCapitalCalls: 3,
+        averageROI: 15.7
+      };
+      res.json(mockStats);
+    } catch (error) {
+      console.error("Error fetching investor statistics:", error);
+      res.status(500).json({ message: "Failed to fetch investor statistics" });
+    }
+  });
+
+  app.get('/api/investors', isAuthenticated, async (req, res) => {
+    try {
+      const mockInvestors = [
+        {
+          id: "inv-1",
+          investorCode: "INV-001",
+          firstName: "Carlos",
+          lastName: "Rodríguez",
+          email: "carlos.rodriguez@email.com",
+          phone: "+52 55 1234 5678",
+          taxId: "RORC850123ABC",
+          investorType: "individual",
+          totalCommitment: "2500000",
+          totalContributed: "1875000",
+          status: "activo",
+          kycCompleted: true,
+          createdAt: new Date("2024-01-15"),
+          updatedAt: new Date("2024-01-15")
+        },
+        {
+          id: "inv-2", 
+          investorCode: "INV-002",
+          firstName: "María",
+          lastName: "González",
+          email: "maria.gonzalez@email.com",
+          phone: "+52 55 9876 5432",
+          taxId: "GOMA900315XYZ",
+          investorType: "individual",
+          totalCommitment: "5000000",
+          totalContributed: "3750000",
+          status: "activo",
+          kycCompleted: true,
+          createdAt: new Date("2024-01-20"),
+          updatedAt: new Date("2024-01-20")
+        }
+      ];
+      res.json(mockInvestors);
+    } catch (error) {
+      console.error("Error fetching investors:", error);
+      res.status(500).json({ message: "Failed to fetch investors" });
+    }
+  });
+
+  app.post('/api/investors', isAuthenticated, async (req, res) => {
+    try {
+      const mockInvestor = {
+        id: `inv-${Date.now()}`,
+        ...req.body,
+        status: "activo",
+        kycCompleted: false,
+        totalContributed: "0",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      res.status(201).json(mockInvestor);
+    } catch (error) {
+      console.error("Error creating investor:", error);
+      res.status(500).json({ message: "Failed to create investor" });
+    }
+  });
+
+  app.get('/api/capital-calls', isAuthenticated, async (req, res) => {
+    try {
+      const mockCapitalCalls = [
+        {
+          id: "cc-1",
+          projectId: "5670e9b8-33e6-4a13-9102-ef62cb47fc0a",
+          callNumber: 1,
+          totalAmount: "5000000",
+          callDate: new Date("2024-02-01"),
+          dueDate: new Date("2024-02-15"),
+          purpose: "Inicio de construcción - Fase 1",
+          status: "pendiente",
+          createdBy: "45547572",
+          createdAt: new Date("2024-01-25")
+        },
+        {
+          id: "cc-2",
+          projectId: "5670e9b8-33e6-4a13-9102-ef62cb47fc0a", 
+          callNumber: 2,
+          totalAmount: "3500000",
+          callDate: new Date("2024-03-01"),
+          dueDate: new Date("2024-03-15"),
+          purpose: "Adquisición de materiales especializados",
+          status: "pagado_completo",
+          createdBy: "45547572",
+          createdAt: new Date("2024-02-20")
+        }
+      ];
+      res.json(mockCapitalCalls);
+    } catch (error) {
+      console.error("Error fetching capital calls:", error);
+      res.status(500).json({ message: "Failed to fetch capital calls" });
+    }
+  });
+
+  app.post('/api/capital-calls', isAuthenticated, async (req, res) => {
+    try {
+      const mockCapitalCall = {
+        id: `cc-${Date.now()}`,
+        ...req.body,
+        status: "pendiente",
+        createdAt: new Date()
+      };
+      res.status(201).json(mockCapitalCall);
+    } catch (error) {
+      console.error("Error creating capital call:", error);
+      res.status(500).json({ message: "Failed to create capital call" });
     }
   });
 
