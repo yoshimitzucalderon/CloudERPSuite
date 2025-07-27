@@ -1,6 +1,57 @@
+# === DEPENDENCIAS Y BUILD ===
 node_modules
 dist
+*.tar.gz
+
+# === ARCHIVOS DEL SISTEMA ===
 .DS_Store
+
+# === CONFIGURACIÓN EXISTENTE ===
 server/public
 vite.config.ts.*
-*.tar.gz
+
+# === ARCHIVOS DE MIGRACIÓN (NUEVO) ===
+backups/
+*.sql
+*.dump
+migration-logs/
+neon_*.sql
+supabase_*.sql
+
+# === VARIABLES DE ENTORNO (CRÍTICO) ===
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+
+# === ARCHIVOS TEMPORALES Y UPLOADS ===
+uploads/
+temp/
+*.tmp
+*.log
+logs/
+
+# === ARCHIVOS SENSIBLES DE SUPABASE ===
+supabase/.env
+supabase/config.toml
+
+# === CACHE Y TEMPORALES ===
+.vite
+.cache
+*.tsbuildinfo
+
+# === ARCHIVOS DE DESARROLLO ===
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# === ARCHIVOS DE TESTING ===
+coverage/
+.nyc_output/
+test-results/
+
+# === ARCHIVOS DE DEPLOY ===
+.vercel
+.netlify
