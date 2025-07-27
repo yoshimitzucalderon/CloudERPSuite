@@ -5,6 +5,12 @@ import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupDevAuth, isAuthenticated as isDevAuthenticated } from "./devAuth";
+
+// Wrapper function to use appropriate authentication based on environment
+const getAuthMiddleware = () => {
+  return process.env.NODE_ENV === 'development' ? isDevAuthenticated : isAuthenticated;
+};
 import { escalationService } from "./escalationService";
 import { documentService } from "./documentService";
 import { projectManagementService } from "./projectManagementService";
@@ -19,6 +25,12 @@ import {
   insertLotSchema,
   insertClientSchema,
   insertSalesContractSchema,
+  insertAuthorizationWorkflowSchema,
+  insertAuthorizationStepSchema,
+  insertAuthorizationMatrixSchema,
+  insertWorkflowStepSchema,
+  insertAuthorityDelegationSchema,
+  insertWorkflowNotificationSchema,
 } from "@shared/schema";
 
 // Configure multer for file uploads
@@ -30,11 +42,15 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Auth middleware - use development auth in development mode
+  if (process.env.NODE_ENV === 'development') {
+    await setupDevAuth(app);
+  } else {
+    await setupAuth(app);
+  }
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', getAuthMiddleware(), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -713,12 +729,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         comments: comments || '',
       });
 
-      // Create notification for requester
+      // Create notification for requester (using safe defaults since workflow might not have these properties)
       await storage.createWorkflowNotification({
         workflowId: id,
-        recipientId: workflow.requestedBy,
+        recipientId: (workflow as any).requestedBy || userId,
         notificationType: action === 'approve' ? 'approval_completed' : 'rejection',
-        message: `Tu solicitud "${workflow.title}" ha sido ${action === 'approve' ? 'aprobada' : 'rechazada'}.`,
+        message: `Tu solicitud "${(workflow as any).title || 'de autorización'}" ha sido ${action === 'approve' ? 'aprobada' : 'rechazada'}.`,
       });
 
       res.json(updatedWorkflow);
@@ -1327,7 +1343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(dependency);
     } catch (error) {
       console.error("Error creating dependency:", error);
-      res.status(500).json({ message: error.message || "Failed to create dependency" });
+      res.status(500).json({ message: (error as Error).message || "Failed to create dependency" });
     }
   });
 
@@ -1421,7 +1437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(evm);
     } catch (error) {
       console.error("Error calculating EVM:", error);
-      res.status(500).json({ message: error.message || "Failed to calculate EVM" });
+      res.status(500).json({ message: (error as Error).message || "Failed to calculate EVM" });
     }
   });
 
@@ -1744,21 +1760,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import demo scenarios
       const { authorizationScenarios } = await import('./demoScenarios');
       
+      // Define authorization type to handle both Date and null/undefined signedAt
+      type Authorization = {
+        step: number;
+        stepType: string;
+        userName: string;
+        userTitle: string;
+        company: string;
+        status: string;
+        signedAt?: Date | null;
+      };
+      
       // Determine which authorization scenario to use
-      let authorizations = authorizationScenarios.pendingApproval.authorizations;
+      let authorizations: Authorization[] = authorizationScenarios.pendingApproval.authorizations as Authorization[];
       
       switch (scenario) {
         case 'canReverse':
-          authorizations = authorizationScenarios.canReverse.authorizations;
+          authorizations = authorizationScenarios.canReverse.authorizations as Authorization[];
           break;
         case 'cannotReverse':
-          authorizations = authorizationScenarios.cannotReverse.authorizations;
+          authorizations = authorizationScenarios.cannotReverse.authorizations as Authorization[];
           break;
         case 'readOnly':
-          authorizations = authorizationScenarios.readOnly.authorizations;
+          authorizations = authorizationScenarios.readOnly.authorizations as Authorization[];
           break;
         default:
-          authorizations = authorizationScenarios.pendingApproval.authorizations;
+          authorizations = authorizationScenarios.pendingApproval.authorizations as Authorization[];
       }
       
       // Import approval store

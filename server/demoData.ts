@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { projects, permits, budgetItems, calendarEvents, budgetCategories, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { storage } from "./storage";
 
 export async function createDemoProject() {
   try {
@@ -23,7 +24,7 @@ export async function createDemoProject() {
         progress: 65,
         description: "Desarrollo residencial de 24 unidades habitacionales con amenidades",
         startDate: new Date("2024-01-15"),
-        estimatedEndDate: new Date("2024-12-20"),
+        endDate: new Date("2024-12-20"),
         createdAt: new Date(),
         updatedAt: new Date(),
       }).returning();

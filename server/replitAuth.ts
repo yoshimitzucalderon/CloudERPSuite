@@ -8,8 +8,15 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
+
+// For local development, use localhost if REPLIT_DOMAINS is not set
 if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+  if (process.env.NODE_ENV === 'development') {
+    process.env.REPLIT_DOMAINS = 'localhost';
+    console.log('Running in development mode with localhost authentication');
+  } else {
+    throw new Error("Environment variable REPLIT_DOMAINS not provided");
+  }
 }
 
 const getOidcConfig = memoize(
@@ -71,6 +78,48 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // For local development, skip OIDC setup if we don't have the required environment variables
+  if (process.env.NODE_ENV === 'development' && (!process.env.REPL_ID || !process.env.ISSUER_URL)) {
+    console.log('Running in development mode without OIDC authentication');
+    
+    // Create a simple development user
+    const devUser = {
+      id: 'dev-user',
+      email: 'dev@localhost',
+      firstName: 'Development',
+      lastName: 'User',
+      profileImageUrl: '',
+      claims: {
+        sub: 'dev-user',
+        email: 'dev@localhost',
+        first_name: 'Development',
+        last_name: 'User',
+        profile_image_url: ''
+      },
+      access_token: 'dev-token',
+      refresh_token: 'dev-refresh-token',
+      expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+    };
+
+    // Add development login route that automatically logs in
+    app.get("/api/login", (req, res) => {
+      req.login(devUser, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login failed" });
+        }
+        res.redirect('/');
+      });
+    });
+
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+    
+    // Pre-create the development user
+    await upsertUser(devUser.claims);
+    
+    return;
+  }
 
   const config = await getOidcConfig();
 

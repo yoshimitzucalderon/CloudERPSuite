@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -47,7 +48,7 @@ import { startEscalationService } from "./escalationService";
   
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
@@ -69,14 +70,22 @@ import { startEscalationService } from "./escalationService";
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+
+if (process.env.NODE_ENV === 'development') {
+  // Configuración para desarrollo local (Windows)
+  server.listen(port, 'localhost', () => {
+    log(`serving on http://localhost:${port}`);
+    startEscalationService();
+  });
+} else {
+  // Configuración para Replit/producción
   server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
-    
-    // Start the escalation service after server is running
     startEscalationService();
   });
+}
 })();
